@@ -18,6 +18,10 @@
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet">
 
+    <!-- Select2 CSS & Bootstrap 5 Theme -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+
     <style>
         :root {
             --primary-color: #4361ee;
@@ -26,6 +30,42 @@
             --bg-color: #f8f9fa;
             --sidebar-width: 260px;
             --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Personnalisation Select2 avec Bootstrap 5 */
+        .select2-container--bootstrap-5 .select2-selection {
+            border-radius: 0.5rem;
+            font-size: 0.95rem;
+            min-height: calc(2.45rem + 2px);
+            padding: 0.35rem 0.75rem;
+            border-color: #dee2e6;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap-5.select2-container--open .select2-selection {
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15) !important;
+        }
+        .select2-dropdown {
+            border-radius: 0.5rem !important;
+            border-color: #dee2e6 !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12) !important;
+            font-size: 0.95rem;
+            z-index: 99999 !important;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--primary-color) !important;
+            color: #ffffff !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            border-radius: 0.375rem;
+            padding: 0.45rem 0.75rem;
+            border: 1px solid #dee2e6;
+        }
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.15);
         }
 
         body {
@@ -133,6 +173,10 @@
             font-weight: 600;
             box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
         }
+        .nav-pills .nav-link.active
+        {
+            color: #fff !important;
+        }
 
         .btn-primary:hover {
             background: var(--secondary-color);
@@ -183,6 +227,7 @@
         <nav class="nav flex-column">
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class='bx bxs-dashboard'></i> Dashboard</a>
             <a href="{{ route('eleves.index') }}" class="nav-link {{ request()->routeIs('eleves.*') ? 'active' : '' }}"><i class='bx bxs-user-badge'></i> Élèves</a>
+            <a href="{{ route('tuteurs.index') }}" class="nav-link {{ request()->routeIs('tuteurs.*') ? 'active' : '' }}"><i class='bx bxs-user-account'></i> Tuteurs</a>
             <a href="{{ route('inscriptions.index') }}" class="nav-link {{ request()->routeIs('inscriptions.*') ? 'active' : '' }}"><i class='bx bx-history'></i> Inscriptions</a>
             <a href="{{ route('classes.index') }}" class="nav-link {{ request()->routeIs('classes.*') ? 'active' : '' }}"><i class='bx bxs-school'></i> Classes</a>
             <a href="{{ route('enseignants.index') }}" class="nav-link {{ request()->routeIs('enseignants.*') ? 'active' : '' }}"><i class='bx bxs-group'></i> Enseignants</a>
@@ -269,7 +314,79 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
+    <!-- Select2 JS & French Language -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/i18n/fr.js"></script>
+
     <script>
+        /**
+         * Initialise Select2 sur les éléments du contexte donné.
+         * Passe les éléments déjà initialisés pour éviter les doublons.
+         * Pour les modals, on détruit et réinitialise à chaque ouverture (hidden → shown).
+         */
+        function initSelect2(context, insideModal) {
+            const $ctx = context ? $(context) : $(document.body);
+
+            // Sélecteurs simples (select.select2)
+            const selector = '.select2, select.select2-enable';
+            let $selects = $ctx.find(selector);
+
+            // Sur le document global (hors modal), on exclut les selects dans .modal
+            // pour éviter l'initialisation avec width:0 quand le modal est caché
+            if (!insideModal) {
+                $selects = $selects.filter(function() {
+                    return $(this).closest('.modal').length === 0;
+                });
+            }
+
+            $selects.each(function() {
+                const $this = $(this);
+
+                // Si déjà initialisé et qu'on n'est pas en mode réinitialisation modale, on skip
+                if ($this.hasClass('select2-hidden-accessible') && !insideModal) {
+                    return;
+                }
+                // Détruire proprement si déjà initialisé (cas modal réouverture)
+                if ($this.hasClass('select2-hidden-accessible')) {
+                    try { $this.select2('destroy'); } catch(e) {}
+                }
+
+                const $modal = $this.closest('.modal');
+                const isModal = $modal.length > 0;
+                const placeholder = $this.data('placeholder') || '';
+
+                $this.select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    language: 'fr',
+                    placeholder: placeholder,
+                    allowClear: !!placeholder && !$this.prop('required'),
+                    dropdownParent: isModal ? $modal : $(document.body)
+                });
+            });
+
+            // Selects multiples
+            $ctx.find('.select2-multiple').each(function() {
+                const $this = $(this);
+                if ($this.hasClass('select2-hidden-accessible') && !insideModal) {
+                    return;
+                }
+                if ($this.hasClass('select2-hidden-accessible')) {
+                    try { $this.select2('destroy'); } catch(e) {}
+                }
+                const $modal = $this.closest('.modal');
+                const isModal = $modal.length > 0;
+
+                $this.select2({
+                    theme: 'bootstrap-5',
+                    width: '100%',
+                    language: 'fr',
+                    placeholder: $this.data('placeholder') || 'Sélectionner des options...',
+                    dropdownParent: isModal ? $modal : $(document.body)
+                });
+            });
+        }
+
         $(document).ready(function() {
             $('.datatable').DataTable({
                 language: {
@@ -286,6 +403,22 @@
                 pageLength: 25,
                 bSort: true,
                 order: []
+            });
+
+            // Initialiser Select2 uniquement sur les éléments HORS modaux
+            initSelect2(document.body, false);
+        });
+
+        // Réinitialiser Select2 à chaque ouverture de modal (destroy + reinit)
+        // On utilise "shown.bs.modal" pour que le modal soit visible (width calculable)
+        $(document).on('shown.bs.modal', '.modal', function() {
+            initSelect2(this, true);
+        });
+
+        // Nettoyage à la fermeture du modal pour éviter les doublons
+        $(document).on('hidden.bs.modal', '.modal', function() {
+            $(this).find('.select2-hidden-accessible').each(function() {
+                try { $(this).select2('destroy'); } catch(e) {}
             });
         });
     </script>

@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Enregistrer un Élève')
 @section('page_title', 'Nouvel Élève')
@@ -73,8 +73,8 @@
                 {{-- SECTION TUTEUR EXISTANT --}}
                 <div id="section_tuteur_existant" class="mt-3">
                     <label class="form-label fw-semibold">Sélectionner le tuteur existant</label>
-                    <select name="parent_id" id="parent_id_select" class="form-select @error('parent_id') is-invalid @enderror">
-                        <option value="">-- Choisir un tuteur existant --</option>
+                    <select name="parent_id" id="parent_id_select" class="form-select select2 @error('parent_id') is-invalid @enderror" data-placeholder="-- Choisir un tuteur existant (Recherche par nom ou tél) --">
+                        <option value=""></option>
                         @foreach($parents as $parent)
                             <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
                                 {{ $parent->user->name ?? 'Parent #' . $parent->id }} &bull; Tél: {{ $parent->telephone ?? $parent->user->telephone ?? 'Non renseigné' }}
@@ -119,12 +119,114 @@
                 </div>
             </div>
 
-            {{-- BANDEAU INFORMATIF INSCRIPTION --}}
-            <div class="alert alert-info border-0 rounded-4 p-3 d-flex align-items-center mb-4">
-                <i class='bx bx-info-circle fs-3 text-primary me-3'></i>
-                <div>
-                    <strong>Affectation de classe &amp; frais scolaires :</strong>
-                    <div class="small text-muted">L'affectation à une classe ainsi que la souscription aux options (cantine, transport) et les réductions tarifaires se font désormais dans le module <strong>Inscriptions</strong>.</div>
+            {{-- AFFECTATION DE CLASSE --}}
+            <div class="card p-4 mb-4 border-0 rounded-4 shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-primary">
+                        <i class='bx bx-building-house me-2'></i>Affectation de Classe
+                    </h5>
+                    @if(!empty($selected_classe_id))
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
+                            <i class='bx bx-check-circle me-1'></i> Inscription directe
+                        </span>
+                    @else
+                        <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill">Optionnel</span>
+                    @endif
+                </div>
+
+                @if(!empty($selected_classe_id))
+                    @php
+                        $preselectedClasse = $classes->firstWhere('id', $selected_classe_id);
+                    @endphp
+                    @if($preselectedClasse)
+                        <div class="alert alert-success border-0 rounded-3 p-3 mb-3 d-flex align-items-center">
+                            <i class='bx bx-check-double fs-3 me-3 text-success'></i>
+                            <div>
+                                <strong>Inscription directe dans : {{ $preselectedClasse->nom }}</strong>
+                                @if($preselectedClasse->niveau) &bull; <span class="badge bg-white text-success border border-success-subtle">{{ $preselectedClasse->niveau->nom }}</span> @endif
+                                <div class="small text-muted">L'élève sera automatiquement inscrit dans cette classe pour l'année scolaire en cours dès l'enregistrement.</div>
+                            </div>
+                        </div>
+                    @endif
+                @endif
+
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">Classe de l'élève</label>
+                        <select name="classe_id" id="classe_id_select" class="form-select select2 @error('classe_id') is-invalid @enderror" data-placeholder="-- Aucune classe pour le moment (Inscription ultérieure) --" onchange="onClasseChange()">
+                            <option value=""></option>
+                            @foreach($classes as $c)
+                                <option value="{{ $c->id }}" 
+                                    data-cantine="{{ $c->montant_cantine ?? '' }}" 
+                                    data-transport="{{ $c->montant_transport ?? '' }}" 
+                                    {{ old('classe_id', $selected_classe_id) == $c->id ? 'selected' : '' }}>
+                                    {{ $c->nom }} @if($c->niveau) ({{ $c->niveau->nom }}) @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('classe_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        <small class="text-muted mt-1 d-block">
+                            <i class='bx bx-info-circle me-1'></i> En choisissant une classe, l'inscription administrative de l'élève est générée immédiatement pour l'année scolaire active.
+                        </small>
+                    </div>
+                </div>
+
+                {{-- SERVICES OPTIONNELS (CANTINE & TRANSPORT) --}}
+                <div id="section_services_options" class="mt-3 pt-3 border-top" style="{{ (!empty($selected_classe_id) || old('classe_id')) ? '' : 'display: none;' }}">
+                    <h6 class="fw-bold text-secondary mb-3">
+                        <i class='bx bx-check-shield me-1 text-primary'></i> Services Optionnels &amp; Prise en charge
+                    </h6>
+                    
+                    <div class="row g-3">
+                        {{-- CANTINE --}}
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 h-100 bg-light">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_cantine" id="avec_cantine" value="1" {{ old('avec_cantine') ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-bold" for="avec_cantine">
+                                        <i class='bx bx-restaurant text-warning me-1'></i> Cantine Scolaire
+                                    </label>
+                                </div>
+                                <div class="small text-muted" id="cantine_tarif_text">
+                                    Inscrire l'élève à la cantine scolaire.
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- TRANSPORT --}}
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 h-100 bg-light">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="avec_transport" value="1" {{ old('avec_transport') ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-bold" for="avec_transport">
+                                        <i class='bx bx-bus text-info me-1'></i> Transport Scolaire
+                                    </label>
+                                </div>
+                                <div class="small text-muted" id="transport_tarif_text">
+                                    Abonner l'élève aux circuits de transport scolaire.
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- REMISES OPTIONNELLES --}}
+                        <div class="col-12 mt-2">
+                            <a class="text-decoration-none small text-muted d-inline-flex align-items-center" data-bs-toggle="collapse" href="#collapseRemises" role="button" aria-expanded="false">
+                                <i class='bx bx-purchase-tag-alt me-1 text-primary'></i> Accorder une remise tarifaire (facultatif) <i class='bx bx-chevron-down ms-1'></i>
+                            </a>
+                            <div class="collapse mt-2 {{ (old('remise_inscription') > 0 || old('remise_mensualite') > 0) ? 'show' : '' }}" id="collapseRemises">
+                                <div class="row g-3 p-3 bg-white rounded-3 border">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Remise sur l'inscription (FCFA)</label>
+                                        <input type="number" name="remise_inscription" class="form-control form-control-sm" value="{{ old('remise_inscription', 0) }}" min="0" step="500">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold">Remise sur mensualité (FCFA)</label>
+                                        <input type="number" name="remise_mensualite" class="form-control form-control-sm" value="{{ old('remise_mensualite', 0) }}" min="0" step="500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -153,9 +255,40 @@ function toggleTuteurMode() {
     }
 }
 
+function onClasseChange() {
+    const select = document.getElementById('classe_id_select');
+    const optionsSection = document.getElementById('section_services_options');
+    if (!select || !optionsSection) return;
+
+    const selectedOption = select.options[select.selectedIndex];
+    if (selectedOption && selectedOption.value) {
+        optionsSection.style.display = 'block';
+        const cantineTarif = selectedOption.getAttribute('data-cantine');
+        const transportTarif = selectedOption.getAttribute('data-transport');
+
+        const cantineText = document.getElementById('cantine_tarif_text');
+        if (cantineText) {
+            cantineText.innerHTML = cantineTarif && parseFloat(cantineTarif) > 0 
+                ? `<span class="badge bg-warning-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(cantineTarif)} FCFA / mois</span>`
+                : 'Inscrire l\'élève à la cantine scolaire.';
+        }
+
+        const transportText = document.getElementById('transport_tarif_text');
+        if (transportText) {
+            transportText.innerHTML = transportTarif && parseFloat(transportTarif) > 0
+                ? `<span class="badge bg-info-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(transportTarif)} FCFA / mois</span>`
+                : 'Abonner l\'élève aux circuits de transport scolaire.';
+        }
+    } else {
+        optionsSection.style.display = 'none';
+    }
+}
+
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', function() {
     toggleTuteurMode();
+    onClasseChange();
+    $('#classe_id_select').on('select2:select select2:clear change', onClasseChange);
 });
 </script>
 @endsection

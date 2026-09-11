@@ -30,6 +30,8 @@ class StoreEleveRequest extends FormRequest
             'classe_id' => 'nullable|exists:classes,id',
             'remise_inscription' => 'nullable|numeric|min:0',
             'remise_mensualite' => 'nullable|numeric|min:0',
+            'avec_cantine' => 'nullable|boolean',
+            'avec_transport' => 'nullable|boolean',
         ];
     }
 

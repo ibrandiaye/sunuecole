@@ -36,12 +36,16 @@ class EleveController extends Controller
     public function create(Request $request)
     {
         $parents = \App\Models\ParentEleve::with('user')->get();
-        return view('eleves.create', compact('parents'));
+        $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
+        $selected_classe_id = $request->get('classe_id');
+        return view('eleves.create', compact('parents', 'classes', 'selected_classe_id'));
     }
 
     public function store(StoreEleveRequest $request)
     {
         $data = $request->validated();
+        $data['avec_cantine'] = $request->boolean('avec_cantine');
+        $data['avec_transport'] = $request->boolean('avec_transport');
         
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('eleves/photos', 'public');
@@ -58,15 +62,13 @@ class EleveController extends Controller
         $eleve->load([
             'classe.niveau', 
             'parent.user', 
-            'absences.matiere', 
-            'absences.cahierTexte',
-            'notes.matiere', 
-            'anneeScolaire',
-            'paiements.typePaiement',
-            'bulletins'
+            'notes.matiere',
+            'absences',
+            'convocations',
+            'bulletins.anneeScolaire',
+            'paiements.recu'
         ]);
 
-        // Calcul de la moyenne simple pour l'affichage
         $moyenne = $eleve->notes->avg('valeur');
 
         return view('eleves.show', compact('eleve', 'moyenne'));
@@ -74,7 +76,8 @@ class EleveController extends Controller
 
     public function edit(Eleve $eleve)
     {
-        $classes = Classe::visible()->where('active', true)->get();
+        $eleve->load('inscriptionActuelle');
+        $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
         $parents = \App\Models\ParentEleve::with('user')->get();
         return view('eleves.edit', compact('eleve', 'classes', 'parents'));
     }
@@ -82,6 +85,8 @@ class EleveController extends Controller
     public function update(UpdateEleveRequest $request, Eleve $eleve)
     {
         $data = $request->validated();
+        $data['avec_cantine'] = $request->boolean('avec_cantine');
+        $data['avec_transport'] = $request->boolean('avec_transport');
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('eleves/photos', 'public');
@@ -111,7 +116,10 @@ class EleveController extends Controller
                     'classe_id' => $eleve->classe_id,
                     'remise_inscription' => $data['remise_inscription'] ?? 0,
                     'remise_mensualite' => $data['remise_mensualite'] ?? 0,
+                    'avec_cantine' => $data['avec_cantine'],
+                    'avec_transport' => $data['avec_transport'],
                     'statut' => $data['statut'] ?? 'actif',
+                    'date_inscription' => now(),
                 ]
             );
         }

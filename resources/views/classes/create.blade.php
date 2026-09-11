@@ -21,7 +21,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Niveau <span class="text-danger">*</span></label>
-                        <select name="niveau_id" class="form-select @error('niveau_id') is-invalid @enderror">
+                        <select name="niveau_id" id="niveau_id_select" class="form-select @error('niveau_id') is-invalid @enderror" onchange="prefillTarifsFromNiveau()">
                             <option value="">Sélectionner le niveau...</option>
                             @foreach($niveaux as $niveau)
                                 <option value="{{ $niveau->id }}" {{ old('niveau_id') == $niveau->id ? 'selected' : '' }}>
@@ -59,27 +59,36 @@
                     </div>
 
                     <div class="col-12 mt-4">
-                        <h6 class="fw-bold text-secondary border-bottom pb-2"><i class='bx bx-money me-2'></i>Configuration Financière</h6>
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                            <h6 class="fw-bold text-secondary mb-0"><i class='bx bx-money me-2'></i>Configuration Financière</h6>
+                            <span class="badge bg-light text-muted border fw-normal" id="info_tarifs_niveau">
+                                <i class='bx bx-info-circle me-1 text-primary'></i>Pré-rempli selon les tarifs du niveau sélectionné
+                            </span>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Inscription</label>
-                        <input type="number" step="0.01" name="montant_inscription" class="form-control" value="{{ old('montant_inscription') }}" placeholder="Ex: 50000">
+                        <label class="form-label fw-semibold">Montant Inscription (FCFA)</label>
+                        <input type="number" step="0.01" name="montant_inscription" id="montant_inscription" class="form-control" value="{{ old('montant_inscription') }}" placeholder="Ex: 50000">
+                        <small class="text-muted mt-1 d-block" id="hint_inscription"></small>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Mensualité</label>
-                        <input type="number" step="0.01" name="montant_mensualite" class="form-control" value="{{ old('montant_mensualite') }}" placeholder="Ex: 30000">
+                        <label class="form-label fw-semibold">Mensualité (FCFA)</label>
+                        <input type="number" step="0.01" name="montant_mensualite" id="montant_mensualite" class="form-control" value="{{ old('montant_mensualite') }}" placeholder="Ex: 30000">
+                        <small class="text-muted mt-1 d-block" id="hint_mensualite"></small>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Cantine / Mois</label>
-                        <input type="number" step="0.01" name="montant_cantine" class="form-control" value="{{ old('montant_cantine') }}" placeholder="Facultatif">
+                        <label class="form-label fw-semibold">Montant Cantine / Mois (FCFA)</label>
+                        <input type="number" step="0.01" name="montant_cantine" id="montant_cantine" class="form-control" value="{{ old('montant_cantine') }}" placeholder="Facultatif">
+                        <small class="text-muted mt-1 d-block" id="hint_cantine"></small>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Transport / Mois</label>
-                        <input type="number" step="0.01" name="montant_transport" class="form-control" value="{{ old('montant_transport') }}" placeholder="Facultatif">
+                        <label class="form-label fw-semibold">Montant Transport / Mois (FCFA)</label>
+                        <input type="number" step="0.01" name="montant_transport" id="montant_transport" class="form-control" value="{{ old('montant_transport') }}" placeholder="Facultatif">
+                        <small class="text-muted mt-1 d-block" id="hint_transport"></small>
                     </div>
                 </div>
 
@@ -91,4 +100,68 @@
         </div>
     </div>
 </div>
+
+@php
+    $niveauxTarifs = [];
+    foreach($niveaux as $n) {
+        $tarifsMap = [];
+        foreach($n->tarifs as $t) {
+            if ($t->typePaiement) {
+                $tarifsMap[$t->typePaiement->code] = (float) $t->montant;
+            }
+        }
+        $niveauxTarifs[$n->id] = $tarifsMap;
+    }
+@endphp
+
+@section('scripts')
+<script>
+const tarifsByNiveau = @json($niveauxTarifs);
+
+function prefillTarifsFromNiveau(force = false) {
+    const select = document.getElementById('niveau_id_select');
+    if (!select) return;
+    const niveauId = select.value;
+    const tarifs = tarifsByNiveau[niveauId] || null;
+
+    const fields = [
+        { id: 'montant_inscription', key: 'INSCR', label: 'Inscription' },
+        { id: 'montant_mensualite',  key: 'MENS',  label: 'Mensualité' },
+        { id: 'montant_cantine',     key: 'CANT',  label: 'Cantine' },
+        { id: 'montant_transport',   key: 'TRANSP', label: 'Transport' }
+    ];
+
+    fields.forEach(f => {
+        const input = document.getElementById(f.id);
+        const hint = document.getElementById('hint_' + f.id.replace('montant_', ''));
+        if (!input) return;
+
+        if (tarifs && tarifs[f.key] !== undefined) {
+            const montant = tarifs[f.key];
+            if (force || !input.value || input.dataset.autoFilled === "1") {
+                input.value = montant;
+                input.dataset.autoFilled = "1";
+            }
+            if (hint) {
+                hint.innerHTML = `<span class="text-success"><i class='bx bx-check-circle me-1'></i>Tarif standard niveau : <strong>${new Intl.NumberFormat('fr-FR').format(montant)} FCFA</strong></span>`;
+            }
+        } else {
+            if (hint) hint.innerHTML = '';
+        }
+
+        // Si l'utilisateur modifie manuellement la valeur, on ne l'écrase plus automatiquement
+        input.addEventListener('input', function() {
+            this.dataset.autoFilled = "0";
+        }, { once: true });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('niveau_id_select');
+    if (select && select.value) {
+        prefillTarifsFromNiveau(false);
+    }
+});
+</script>
+@endsection
 @endsection

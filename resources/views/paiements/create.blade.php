@@ -15,8 +15,8 @@
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label fw-bold">Élève <span class="text-danger">*</span></label>
-                        <select name="eleve_id" id="eleve_id" class="form-select @error('eleve_id') is-invalid @enderror" required>
-                            <option value="">-- Sélectionner l'élève --</option>
+                        <select name="eleve_id" id="eleve_id" class="form-select select2 @error('eleve_id') is-invalid @enderror" data-placeholder="Rechercher un élève par nom, prénom ou matricule..." required>
+                            <option value=""></option>
                             @foreach($eleves as $eleve)
                                 <option value="{{ $eleve->id }}" {{ old('eleve_id', request('eleve_id')) == $eleve->id ? 'selected' : '' }}>
                                     {{ $eleve->matricule }} - {{ $eleve->prenom }} {{ $eleve->nom }} ({{ $eleve->classe->nom ?? 'Sans classe' }})
@@ -28,8 +28,8 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Type de frais <span class="text-danger">*</span></label>
-                        <select name="type_paiement_id" id="type_paiement_id" class="form-select" required>
-                            <option value="">-- Sélectionner le motif --</option>
+                        <select name="type_paiement_id" id="type_paiement_id" class="form-select select2" data-placeholder="-- Sélectionner le motif --" required>
+                            <option value=""></option>
                             @foreach($types as $type)
                                 <option value="{{ $type->id }}" {{ old('type_paiement_id', request('type_paiement_id')) == $type->id ? 'selected' : '' }}>{{ $type->nom }}</option>
                             @endforeach
@@ -122,6 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     eleveSelect.addEventListener('change', fetchAmount);
     typeSelect.addEventListener('change', fetchAmount);
+    $('#eleve_id, #type_paiement_id').on('select2:select select2:clear change', fetchAmount);
 
     // Initial check if values are pre-selected
     if(eleveSelect.value && typeSelect.value) {

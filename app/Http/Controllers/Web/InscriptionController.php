@@ -21,12 +21,28 @@ class InscriptionController extends Controller
 
     public function create(Request $request)
     {
-        $eleves = Eleve::orderBy('nom')->get();
-        $classes = Classe::where('active', true)->get();
-        $annees = AnneeScolaire::all();
+        $anneeActive = AnneeScolaire::where('active', true)->first();
         $selected_eleve = $request->get('eleve_id');
+        $selected_classe_id = $request->get('classe_id');
 
-        return view('inscriptions.create', compact('eleves', 'classes', 'annees', 'selected_eleve'));
+        $query = Eleve::visible()->orderBy('nom')->orderBy('prenom');
+
+        if ($anneeActive) {
+            $query->where(function ($q) use ($anneeActive, $selected_eleve) {
+                $q->whereDoesntHave('inscriptions', function ($sub) use ($anneeActive) {
+                    $sub->where('annee_scolaire_id', $anneeActive->id);
+                });
+                if ($selected_eleve) {
+                    $q->orWhere('id', $selected_eleve);
+                }
+            });
+        }
+
+        $eleves = $query->get();
+        $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
+        $annees = AnneeScolaire::all();
+
+        return view('inscriptions.create', compact('eleves', 'classes', 'annees', 'selected_eleve', 'selected_classe_id', 'anneeActive'));
     }
 
     public function store(Request $request)
@@ -36,6 +52,8 @@ class InscriptionController extends Controller
             'classe_id' => 'required|exists:classes,id',
             'annee_scolaire_id' => 'required|exists:annee_scolaires,id',
             'date_inscription' => 'required|date',
+            'remise_inscription' => 'nullable|numeric|min:0',
+            'remise_mensualite' => 'nullable|numeric|min:0',
         ]);
 
         // Vérifier si déjà inscrit pour cette année
@@ -48,10 +66,10 @@ class InscriptionController extends Controller
         }
 
         $data = $request->all();
-        $data['avec_cantine'] = $request->has('avec_cantine') ? true : false;
-        $data['avec_transport'] = $request->has('avec_transport') ? true : false;
+        $data['avec_cantine'] = $request->boolean('avec_cantine');
+        $data['avec_transport'] = $request->boolean('avec_transport');
 
-        Inscription::create($data);
+        $inscription = Inscription::create($data);
 
         // Mettre à jour la classe actuelle de l'élève (si c'est l'année en cours)
         $anneeActive = AnneeScolaire::where('active', true)->first();
@@ -61,6 +79,15 @@ class InscriptionController extends Controller
                 'classe_id' => $request->classe_id,
                 'annee_scolaire_id' => $request->annee_scolaire_id
             ]);
+        }
+
+        if ($request->has('redirect_to_classes')) {
+            $classe = Classe::find($request->classe_id);
+            $eleve = Eleve::find($request->eleve_id);
+            $eleveName = $eleve ? "{$eleve->prenom} {$eleve->nom}" : "L'élève";
+            $classeName = $classe ? $classe->nom : "la classe";
+            return redirect()->route('classes.index')
+                ->with('success', "{$eleveName} a été inscrit(e) dans {$classeName} avec succès !");
         }
 
         return redirect()->route('inscriptions.index')

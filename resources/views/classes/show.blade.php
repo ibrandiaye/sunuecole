@@ -19,6 +19,15 @@
                 </div>
                 <div>
                     <a href="{{ route('classes.index') }}" class="btn btn-outline-secondary me-2"><i class='bx bx-arrow-back me-1'></i>Retour</a>
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class='bx bx-user-plus me-1'></i>Inscrire un élève
+                        </button>
+                        <ul class="dropdown-menu shadow-sm border-0">
+                            <li><a class="dropdown-item" href="{{ route('eleves.create', ['classe_id' => $classe->id]) }}"><i class='bx bx-user-plus me-2 text-success'></i>Nouvel élève</a></li>
+                            <li><a class="dropdown-item" href="{{ route('inscriptions.create', ['classe_id' => $classe->id]) }}"><i class='bx bx-user-check me-2 text-primary'></i>Élève déjà enregistré</a></li>
+                        </ul>
+                    </div>
                     <a href="{{ route('classes.edit', $classe) }}" class="btn btn-primary"><i class='bx bx-edit me-1'></i>Modifier</a>
                 </div>
             </div>

@@ -30,6 +30,8 @@ class UpdateEleveRequest extends FormRequest
             'statut' => 'required|in:actif,archivé,transféré,exclu',
             'remise_inscription' => 'nullable|numeric|min:0',
             'remise_mensualite' => 'nullable|numeric|min:0',
+            'avec_cantine' => 'nullable|boolean',
+            'avec_transport' => 'nullable|boolean',
         ];
     }
 }

@@ -44,7 +44,7 @@
 
                     <div class="col-md-12">
                         <label class="form-label fw-semibold">Matières enseignées</label>
-                        <select name="matieres[]" class="form-select @error('matieres') is-invalid @enderror" multiple style="height: 150px;">
+                        <select name="matieres[]" class="form-select select2-multiple @error('matieres') is-invalid @enderror" multiple data-placeholder="Sélectionnez les matières...">
                             @php $selectedMatieres = old('matieres', $enseignant->matieres->pluck('id')->toArray()); @endphp
                             @foreach($matieres as $matiere)
                                 <option value="{{ $matiere->id }}" {{ in_array($matiere->id, $selectedMatieres) ? 'selected' : '' }}>
@@ -52,7 +52,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="form-text mt-1">Utilisez Ctrl+Clic pour sélectionner plusieurs matières.</div>
                         @error('matieres') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
                 </div>

@@ -20,15 +20,31 @@ class ClasseController extends Controller
             ->latest()
             ->get();
             
-        return view('classes.index', compact('classes'));
+        $anneeActive = AnneeScolaire::where('active', true)->first();
+        $elevesNonInscrits = collect();
+        if ($anneeActive) {
+            $elevesNonInscrits = \App\Models\Eleve::visible()
+                ->whereDoesntHave('inscriptions', function ($q) use ($anneeActive) {
+                    $q->where('annee_scolaire_id', $anneeActive->id);
+                })
+                ->orderBy('nom')
+                ->orderBy('prenom')
+                ->get();
+        }
+
+        return view('classes.index', compact('classes', 'anneeActive', 'elevesNonInscrits'));
     }
 
     public function create()
     {
-        $niveaux = Niveau::all();
+        $activeYear = AnneeScolaire::where('active', true)->first();
+        $niveaux = Niveau::with(['cycle', 'tarifs' => function($q) use ($activeYear) {
+            $q->where('annee_scolaire_id', $activeYear ? $activeYear->id : 0)->with('typePaiement');
+        }])->orderBy('ordre')->get();
+
         $series = Serie::all();
         $salles = Salle::where('disponible', true)->get();
-        return view('classes.create', compact('niveaux', 'series', 'salles'));
+        return view('classes.create', compact('niveaux', 'series', 'salles', 'activeYear'));
     }
 
     public function store(StoreClasseRequest $request)
@@ -50,15 +66,31 @@ class ClasseController extends Controller
         $matieres_disponibles = \App\Models\Matiere::where('cycle_id', $classe->niveau->cycle_id)->get();
         $enseignants_disponibles = \App\Models\Enseignant::with('user')->get();
 
-        return view('classes.show', compact('classe', 'matieres_disponibles', 'enseignants_disponibles'));
+        $anneeActive = AnneeScolaire::where('active', true)->first();
+        $elevesNonInscrits = collect();
+        if ($anneeActive) {
+            $elevesNonInscrits = \App\Models\Eleve::visible()
+                ->whereDoesntHave('inscriptions', function ($q) use ($anneeActive) {
+                    $q->where('annee_scolaire_id', $anneeActive->id);
+                })
+                ->orderBy('nom')
+                ->orderBy('prenom')
+                ->get();
+        }
+
+        return view('classes.show', compact('classe', 'matieres_disponibles', 'enseignants_disponibles', 'anneeActive', 'elevesNonInscrits'));
     }
 
     public function edit(Classe $classe)
     {
-        $niveaux = Niveau::all();
+        $activeYear = AnneeScolaire::where('active', true)->first();
+        $niveaux = Niveau::with(['cycle', 'tarifs' => function($q) use ($activeYear) {
+            $q->where('annee_scolaire_id', $activeYear ? $activeYear->id : 0)->with('typePaiement');
+        }])->orderBy('ordre')->get();
+
         $series = Serie::all();
         $salles = Salle::all();
-        return view('classes.edit', compact('classe', 'niveaux', 'series', 'salles'));
+        return view('classes.edit', compact('classe', 'niveaux', 'series', 'salles', 'activeYear'));
     }
 
     public function update(Request $request, Classe $classe)

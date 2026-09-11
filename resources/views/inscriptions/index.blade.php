@@ -19,6 +19,7 @@
                     <th>ÉLÈVE</th>
                     <th>CLASSE</th>
                     <th>ANNÉE SCOLAIRE</th>
+                    <th>SERVICES</th>
                     <th>DATE</th>
                     <th>STATUT</th>
                     <th class="text-end">ACTIONS</th>
@@ -38,6 +39,21 @@
                     </td>
                     <td><span class="badge bg-primary-subtle text-primary">{{ $inscription->classe->nom }}</span></td>
                     <td>{{ $inscription->anneeScolaire->libelle }}</td>
+                    <td>
+                        @if($inscription->avec_cantine)
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle me-1" title="Inscrit à la cantine">
+                                <i class='bx bx-restaurant'></i> Cantine
+                            </span>
+                        @endif
+                        @if($inscription->avec_transport)
+                            <span class="badge bg-info-subtle text-info border border-info-subtle me-1" title="Inscrit au transport">
+                                <i class='bx bx-bus'></i> Transport
+                            </span>
+                        @endif
+                        @if(!$inscription->avec_cantine && !$inscription->avec_transport)
+                            <span class="text-muted small">Standard</span>
+                        @endif
+                    </td>
                     <td>{{ $inscription->date_inscription->format('d/m/Y') }}</td>
                     <td>
                         <span class="badge {{ $inscription->statut == 'actif' ? 'bg-success' : 'bg-secondary' }}">

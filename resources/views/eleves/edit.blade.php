@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Modifier Élève')
 @section('page_title', 'Modification de l\'Élève')
@@ -56,9 +56,54 @@
                             <option value="exclu" {{ $eleve->statut == 'exclu' ? 'selected' : '' }}>Exclu</option>
                         </select>
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Classe de l'élève</label>
+                        <select name="classe_id" class="form-select select2 @error('classe_id') is-invalid @enderror" data-placeholder="-- Aucune classe assignée --">
+                            <option value=""></option>
+                            @foreach($classes as $c)
+                                <option value="{{ $c->id }}" {{ old('classe_id', $eleve->classe_id) == $c->id ? 'selected' : '' }}>
+                                    {{ $c->nom }} @if($c->niveau) ({{ $c->niveau->nom }}) @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('classe_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label fw-semibold">Photo (laisser vide pour conserver)</label>
                         <input type="file" name="photo" class="form-control" accept="image/*">
+                    </div>
+
+                    {{-- SERVICES OPTIONNELS (CANTINE & TRANSPORT) --}}
+                    <div class="col-12 mt-3 pt-3 border-top">
+                        <label class="form-label fw-bold text-secondary mb-2">
+                            <i class='bx bx-check-shield me-1 text-primary'></i> Services &amp; Prise en charge (Année en cours)
+                        </label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="avec_cantine" id="edit_avec_cantine" value="1" 
+                                            {{ old('avec_cantine', $eleve->inscriptionActuelle?->avec_cantine) ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold" for="edit_avec_cantine">
+                                            <i class='bx bx-restaurant text-warning me-1'></i> Cantine Scolaire
+                                        </label>
+                                    </div>
+                                    <div class="small text-muted mt-1">Élève inscrit au service de restauration scolaire.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-light">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="edit_avec_transport" value="1" 
+                                            {{ old('avec_transport', $eleve->inscriptionActuelle?->avec_transport) ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold" for="edit_avec_transport">
+                                            <i class='bx bx-bus text-info me-1'></i> Transport Scolaire
+                                        </label>
+                                    </div>
+                                    <div class="small text-muted mt-1">Élève abonné aux circuits de transport scolaire.</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -70,8 +115,8 @@
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label fw-semibold">Rattacher à un tuteur enregistré</label>
-                        <select name="parent_id" class="form-select">
-                            <option value="">-- Aucun parent sélectionné / Saisie manuelle --</option>
+                        <select name="parent_id" class="form-select select2" data-placeholder="-- Aucun parent sélectionné / Saisie manuelle --">
+                            <option value=""></option>
                             @foreach($parents as $parent)
                                 <option value="{{ $parent->id }}" {{ old('parent_id', $eleve->parent_id) == $parent->id ? 'selected' : '' }}>
                                     {{ $parent->user->name ?? 'Parent #' . $parent->id }} &bull; Tél: {{ $parent->telephone ?? $parent->user->telephone ?? 'Non renseigné' }}

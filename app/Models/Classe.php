@@ -69,4 +69,40 @@ class Classe extends Model
     {
         return $this->hasMany(EmploiDuTemps::class);
     }
+
+    /**
+     * Récupère le tarif effectif pour un type de paiement donné (INSCR, MENS, CANT, TRANSP).
+     * Priorité 1: Montant spécifique à la classe
+     * Priorité 2: Tarif configuré pour le niveau (année scolaire active)
+     */
+    public function getEffectiveTarif(string $code): ?float
+    {
+        $field = match($code) {
+            'INSCR'  => 'montant_inscription',
+            'MENS'   => 'montant_mensualite',
+            'CANT'   => 'montant_cantine',
+            'TRANSP' => 'montant_transport',
+            default  => null,
+        };
+
+        if ($field && $this->$field !== null) {
+            return (float) $this->$field;
+        }
+
+        $activeYear = \App\Models\AnneeScolaire::where('active', true)->first();
+        if ($this->niveau_id && $activeYear) {
+            $type = \App\Models\TypePaiement::where('code', $code)->first();
+            if ($type) {
+                $tarif = \App\Models\Tarif::where('annee_scolaire_id', $activeYear->id)
+                    ->where('niveau_id', $this->niveau_id)
+                    ->where('type_paiement_id', $type->id)
+                    ->first();
+                if ($tarif) {
+                    return (float) $tarif->montant;
+                }
+            }
+        }
+
+        return null;
+    }
 }

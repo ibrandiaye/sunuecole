@@ -114,6 +114,8 @@ class EleveService
                     'statut' => 'actif',
                     'remise_inscription' => $data['remise_inscription'] ?? 0,
                     'remise_mensualite' => $data['remise_mensualite'] ?? 0,
+                    'avec_cantine' => !empty($data['avec_cantine']),
+                    'avec_transport' => !empty($data['avec_transport']),
                 ]);
             }
 

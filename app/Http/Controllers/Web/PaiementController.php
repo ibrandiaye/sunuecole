@@ -142,73 +142,106 @@ class PaiementController extends Controller
         $annee = AnneeScolaire::where('active', true)->first();
         $moisList = AnneeScolaire::getMoisScolaires($annee);
 
-        // Déterminer le mois sélectionné par défaut parmi les 9 mois scolaires
+        // Mois par défaut
         $currentMonthYear = date('m/Y');
         $defaultMois = array_key_exists($currentMonthYear, $moisList) ? $currentMonthYear : array_key_first($moisList);
         $selected_mois = $request->get('mois', $defaultMois);
 
-        $is_export = $request->has('export');
+        // Onglet actif : mensualite | cantine | transport
+        $tab = $request->get('tab', 'mensualite');
+
+        $is_export   = $request->has('export');
         $retards_only = $request->has('retards_only');
 
-        $eleves = collect();
-        $typeMensualite = TypePaiement::where('code', 'MENS')
-            ->orWhere('nom', 'like', '%Mensualité%')
-            ->orWhere('nom', 'like', '%Mensualite%')
-            ->first();
+        // Charger les types de paiement
+        $typeMensualite = TypePaiement::where('code', 'MENS')->orWhere('nom', 'like', '%Mensualit%')->first();
+        $typeCantine    = TypePaiement::where('code', 'CANT')->orWhere('nom', 'like', '%Cantine%')->first();
+        $typeTransport  = TypePaiement::where('code', 'TRANSP')->orWhere('nom', 'like', '%Transport%')->first();
 
+        // Choisir le type selon l'onglet
+        $typeActif = match($tab) {
+            'cantine'   => $typeCantine,
+            'transport' => $typeTransport,
+            default     => $typeMensualite,
+        };
+
+        $eleves     = collect();
         $totalReste = 0;
 
-        if ($typeMensualite) {
-            $query = Eleve::with(['paiements' => function ($query) use ($typeMensualite, $selected_mois, $annee) {
-                    $query->where('type_paiement_id', $typeMensualite->id)
-                          ->where('mois', $selected_mois)
-                          ->where('annee_scolaire_id', $annee ? $annee->id : 0);
-                }, 'inscriptionActuelle', 'classe.niveau'])
-                ->where('statut', 'actif');
+        if ($typeActif) {
+            // Pour cantine et transport, on ne filtre que les élèves inscrits avec l'option
+            $query = Eleve::with([
+                'paiements' => function ($q) use ($typeActif, $selected_mois, $annee) {
+                    $q->where('type_paiement_id', $typeActif->id)
+                      ->where('mois', $selected_mois)
+                      ->where('annee_scolaire_id', $annee ? $annee->id : 0);
+                },
+                'inscriptionActuelle',
+                'classe.niveau'
+            ])->where('statut', 'actif');
 
             if ($selected_classe_id) {
                 $query->where('eleves.classe_id', $selected_classe_id);
             }
 
+            // Pour cantine / transport, filtrer uniquement les élèves qui ont souscrit
+            if ($tab === 'cantine') {
+                $query->whereHas('inscriptionActuelle', fn($q) => $q->where('avec_cantine', true));
+            } elseif ($tab === 'transport') {
+                $query->whereHas('inscriptionActuelle', fn($q) => $q->where('avec_transport', true));
+            }
+
             $eleves = $query->join('classes', 'eleves.classe_id', '=', 'classes.id')
                             ->orderBy('classes.nom')
                             ->orderBy('eleves.nom')
-                            ->select('eleves.*') 
+                            ->select('eleves.*')
                             ->get();
 
-            $eleves->map(function($eleve) use ($typeMensualite, $annee) {
-                $tarifBase = $this->calculateTarifBase($eleve, $typeMensualite, $annee);
-                
-                $remise = $eleve->inscriptionActuelle ? $eleve->inscriptionActuelle->remise_mensualite : 0;
+            $eleves->map(function ($eleve) use ($typeActif, $annee) {
+                $tarifBase = $this->calculateTarifBase($eleve, $typeActif, $annee);
+
+                $remise = 0;
+                if ($eleve->inscriptionActuelle) {
+                    if ($typeActif->code === 'INSCR') {
+                        $remise = $eleve->inscriptionActuelle->remise_inscription;
+                    } elseif ($typeActif->code === 'MENS') {
+                        $remise = $eleve->inscriptionActuelle->remise_mensualite;
+                    }
+                }
                 $eleve->montant_attendu = max(0, $tarifBase - $remise);
-                
+
                 $paiement = $eleve->paiements->first();
-                $eleve->montant_paye = $paiement ? $paiement->montant_paye : 0;
+                $eleve->montant_paye  = $paiement ? $paiement->montant_paye : 0;
                 $eleve->reste_a_payer = max(0, $eleve->montant_attendu - $eleve->montant_paye);
-                
-                if ($eleve->reste_a_payer == 0) $eleve->statut_paiement = 'Payé';
-                elseif ($eleve->montant_paye > 0) $eleve->statut_paiement = 'Incomplet';
-                else $eleve->statut_paiement = 'Impayé';
+
+                if ($eleve->reste_a_payer == 0)    $eleve->statut_paiement = 'Payé';
+                elseif ($eleve->montant_paye > 0)   $eleve->statut_paiement = 'Incomplet';
+                else                                 $eleve->statut_paiement = 'Impayé';
 
                 return $eleve;
             });
 
             if ($retards_only || $is_export) {
-                $eleves = $eleves->filter(function($eleve) {
-                    return $eleve->reste_a_payer > 0;
-                });
+                $eleves = $eleves->filter(fn($e) => $e->reste_a_payer > 0);
             }
 
             $totalReste = $eleves->sum('reste_a_payer');
 
             if ($is_export) {
-                $pdf = Pdf::loadView('paiements.export_retards', compact('eleves', 'selected_mois', 'totalReste', 'selected_classe_id', 'classes'));
-                return $pdf->stream("retards_paiement_".str_replace('/', '_', $selected_mois).".pdf");
+                $pdf = Pdf::loadView('paiements.export_retards', compact(
+                    'eleves', 'selected_mois', 'totalReste', 'selected_classe_id', 'classes'
+                ));
+                return $pdf->stream('retards_paiement_' . str_replace('/', '_', $selected_mois) . '.pdf');
             }
         }
 
-        return view('paiements.suivi', compact('classes', 'selected_classe_id', 'selected_mois', 'eleves', 'typeMensualite', 'totalReste', 'retards_only', 'moisList'));
+        return view('paiements.suivi', compact(
+            'classes', 'selected_classe_id', 'selected_mois',
+            'eleves', 'typeActif', 'typeMensualite', 'typeCantine', 'typeTransport',
+            'totalReste', 'retards_only', 'moisList', 'tab'
+        ));
     }
+
 
     private function calculateTarifBase($eleve, $type, $annee)
     {
@@ -218,30 +251,34 @@ class PaiementController extends Controller
             $code = $type->code;
             $classe = $eleve->classe;
             
+            // Montants effectifs des services optionnels (Classe > Niveau > 0)
+            $montantCantine = $classe->getEffectiveTarif('CANT') ?? 0;
+            $montantTransport = $classe->getEffectiveTarif('TRANSP') ?? 0;
+
             // Calcul des options supplémentaires
             $optionsAmount = 0;
             if ($eleve->inscriptionActuelle) {
-                if ($eleve->inscriptionActuelle->avec_cantine && $classe->montant_cantine !== null) {
-                    $optionsAmount += $classe->montant_cantine;
+                if ($eleve->inscriptionActuelle->avec_cantine) {
+                    $optionsAmount += $montantCantine;
                 }
-                if ($eleve->inscriptionActuelle->avec_transport && $classe->montant_transport !== null) {
-                    $optionsAmount += $classe->montant_transport;
+                if ($eleve->inscriptionActuelle->avec_transport) {
+                    $optionsAmount += $montantTransport;
                 }
             }
 
             if ($code === 'INSCR') {
-                $base = $classe->montant_inscription !== null ? $classe->montant_inscription : $tarifBase;
+                $base = $classe->getEffectiveTarif('INSCR') ?? $tarifBase;
                 $tarifBase = $base + $optionsAmount;
             } elseif ($code === 'MENS') {
-                $base = $classe->montant_mensualite !== null ? $classe->montant_mensualite : $tarifBase;
+                $base = $classe->getEffectiveTarif('MENS') ?? $tarifBase;
                 $tarifBase = $base + $optionsAmount;
             } elseif ($code === 'CANT') {
-                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_cantine && $classe->montant_cantine !== null) 
-                    ? $classe->montant_cantine 
+                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_cantine) 
+                    ? $montantCantine 
                     : 0;
             } elseif ($code === 'TRANSP') {
-                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_transport && $classe->montant_transport !== null) 
-                    ? $classe->montant_transport 
+                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_transport) 
+                    ? $montantTransport 
                     : 0;
             } else {
                 if ($classe->niveau && $annee) {
@@ -250,7 +287,7 @@ class PaiementController extends Controller
                         ->where('type_paiement_id', $type->id)
                         ->first();
                     if ($tarifConfig) {
-                        $tarifBase = $tarifConfig->montant;
+                        $tarifBase = (float) $tarifConfig->montant;
                     }
                 }
             }

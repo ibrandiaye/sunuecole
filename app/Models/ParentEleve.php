@@ -8,7 +8,14 @@ class ParentEleve extends Model
 {
     protected $table = 'parents';
 
-    protected $fillable = ['user_id', 'telephone'];
+    protected $fillable = [
+        'user_id', 'telephone', 'profession',
+        'adresse', 'relation', 'nin', 'photo', 'actif',
+    ];
+
+    protected $casts = [
+        'actif' => 'boolean',
+    ];
 
     public function user()
     {
@@ -18,5 +25,14 @@ class ParentEleve extends Model
     public function eleves()
     {
         return $this->hasMany(Eleve::class, 'parent_id');
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->whereHas('user', fn($q) =>
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%")
+              ->orWhere('telephone', 'like', "%{$search}%")
+        )->orWhere('telephone', 'like', "%{$search}%");
     }
 }

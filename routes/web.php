@@ -16,6 +16,7 @@ use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\InscriptionController;
+use App\Http\Controllers\Web\TuteurController;
 use Illuminate\Support\Facades\Route;
 
 // Authentification
@@ -29,6 +30,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Gestion des Élèves
     Route::resource('eleves', EleveController::class)->parameters(['eleves' => 'eleve']);
+
+    // Gestion des Tuteurs / Parents
+    Route::post('tuteurs/{tuteur}/toggle', [TuteurController::class, 'toggleStatus'])->name('tuteurs.toggle');
+    Route::resource('tuteurs', TuteurController::class)->parameters(['tuteurs' => 'tuteur'])->only(['index', 'edit', 'update']);
 
     // Gestion des Classes
     Route::post('classes/{classe}/matieres', [ClasseController::class, 'attachMatiere'])->name('classes.matieres.attach');
