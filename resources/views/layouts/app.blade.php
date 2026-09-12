@@ -225,23 +225,50 @@
         </div>
 
         <nav class="nav flex-column">
+            {{-- Dashboard : tous --}}
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"><i class='bx bxs-dashboard'></i> Dashboard</a>
-            <a href="{{ route('eleves.index') }}" class="nav-link {{ request()->routeIs('eleves.*') ? 'active' : '' }}"><i class='bx bxs-user-badge'></i> Élèves</a>
-            <a href="{{ route('tuteurs.index') }}" class="nav-link {{ request()->routeIs('tuteurs.*') ? 'active' : '' }}"><i class='bx bxs-user-account'></i> Tuteurs</a>
-            <a href="{{ route('inscriptions.index') }}" class="nav-link {{ request()->routeIs('inscriptions.*') ? 'active' : '' }}"><i class='bx bx-history'></i> Inscriptions</a>
-            <a href="{{ route('classes.index') }}" class="nav-link {{ request()->routeIs('classes.*') ? 'active' : '' }}"><i class='bx bxs-school'></i> Classes</a>
-            <a href="{{ route('enseignants.index') }}" class="nav-link {{ request()->routeIs('enseignants.*') ? 'active' : '' }}"><i class='bx bxs-group'></i> Enseignants</a>
-            <a href="{{ route('matieres.index') }}" class="nav-link {{ request()->routeIs('matieres.*') ? 'active' : '' }}"><i class='bx bxs-book'></i> Matières</a>
-            <a href="{{ route('emplois.index') }}" class="nav-link {{ request()->routeIs('emplois.*') ? 'active' : '' }}"><i class='bx bxs-calendar'></i> Emploi du Temps</a>
-            <a href="{{ route('notes.index') }}" class="nav-link {{ request()->routeIs('notes.*') ? 'active' : '' }}"><i class='bx bxs-edit'></i> Notes</a>
-            <a href="{{ route('paiements.index') }}" class="nav-link {{ request()->routeIs('paiements.index') || request()->routeIs('paiements.create') ? 'active' : '' }}"><i class='bx bxs-wallet'></i> Paiements</a>
-            <a href="{{ route('paiements.suivi') }}" class="nav-link {{ request()->routeIs('paiements.suivi') ? 'active' : '' }}"><i class='bx bx-search-alt'></i> Suivi Mensualités</a>
-            <a href="{{ route('rapports.financier') }}" class="nav-link {{ request()->routeIs('rapports.financier') ? 'active' : '' }}"><i class='bx bxs-pie-chart-alt-2'></i> Rapport Financier</a>
-            <a href="{{ route('bulletins.index') }}" class="nav-link {{ request()->routeIs('bulletins.*') ? 'active' : '' }}"><i class='bx bxs-file-pdf'></i> Bulletins</a>
-            <a href="{{ route('absences.index') }}" class="nav-link {{ request()->routeIs('absences.*') ? 'active' : '' }}"><i class='bx bxs-time-five'></i> Absences</a>
-            <a href="{{ route('convocations.index') }}" class="nav-link {{ request()->routeIs('convocations.*') ? 'active' : '' }}"><i class='bx bxs-error-circle'></i> Convocations</a>
-            <a href="{{ route('depenses.index') }}" class="nav-link {{ request()->routeIs('depenses.*') ? 'active' : '' }}"><i class='bx bx-money-withdraw'></i> Depenses</a>
-            <a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('users.*') || request()->routeIs('niveaux.*') ? 'active' : '' }}"><i class='bx bxs-cog'></i> Admin & Paramètres</a>
+
+            {{-- === MODULE ADMINISTRATIF === --}}
+            @hasanyrole(['super_admin', 'directeur', 'administratif'])
+                <a href="{{ route('eleves.index') }}" class="nav-link {{ request()->routeIs('eleves.*') ? 'active' : '' }}"><i class='bx bxs-user-badge'></i> Élèves</a>
+                <a href="{{ route('tuteurs.index') }}" class="nav-link {{ request()->routeIs('tuteurs.*') ? 'active' : '' }}"><i class='bx bxs-user-account'></i> Tuteurs</a>
+                <a href="{{ route('inscriptions.index') }}" class="nav-link {{ request()->routeIs('inscriptions.*') ? 'active' : '' }}"><i class='bx bx-history'></i> Inscriptions</a>
+                <a href="{{ route('classes.index') }}" class="nav-link {{ request()->routeIs('classes.*') ? 'active' : '' }}"><i class='bx bxs-school'></i> Classes</a>
+                <a href="{{ route('enseignants.index') }}" class="nav-link {{ request()->routeIs('enseignants.*') ? 'active' : '' }}"><i class='bx bxs-group'></i> Enseignants</a>
+                <a href="{{ route('matieres.index') }}" class="nav-link {{ request()->routeIs('matieres.*') ? 'active' : '' }}"><i class='bx bxs-book'></i> Matières</a>
+                <a href="{{ route('emplois.index') }}" class="nav-link {{ request()->routeIs('emplois.*') ? 'active' : '' }}"><i class='bx bxs-calendar'></i> Emploi du Temps</a>
+                <a href="{{ route('notes.index') }}" class="nav-link {{ request()->routeIs('notes.*') ? 'active' : '' }}"><i class='bx bxs-edit'></i> Notes</a>
+                <a href="{{ route('bulletins.index') }}" class="nav-link {{ request()->routeIs('bulletins.*') ? 'active' : '' }}"><i class='bx bxs-file-pdf'></i> Bulletins</a>
+                <a href="{{ route('absences.index') }}" class="nav-link {{ request()->routeIs('absences.*') ? 'active' : '' }}"><i class='bx bxs-time-five'></i> Absences</a>
+                <a href="{{ route('convocations.index') }}" class="nav-link {{ request()->routeIs('convocations.*') ? 'active' : '' }}"><i class='bx bxs-error-circle'></i> Convocations</a>
+            @endhasanyrole
+
+            {{-- Vue élèves/classes/inscriptions/tuteurs pour comptable (lecture seule) --}}
+            @role('comptable')
+                <a href="{{ route('eleves.index') }}" class="nav-link {{ request()->routeIs('eleves.*') ? 'active' : '' }}"><i class='bx bxs-user-badge'></i> Élèves</a>
+                <a href="{{ route('tuteurs.index') }}" class="nav-link {{ request()->routeIs('tuteurs.*') ? 'active' : '' }}"><i class='bx bxs-user-account'></i> Tuteurs</a>
+                <a href="{{ route('inscriptions.index') }}" class="nav-link {{ request()->routeIs('inscriptions.*') ? 'active' : '' }}"><i class='bx bxs-book-content'></i> Inscriptions</a>
+                <a href="{{ route('classes.index') }}" class="nav-link {{ request()->routeIs('classes.*') ? 'active' : '' }}"><i class='bx bxs-school'></i> Classes</a>
+            @endrole
+
+            {{-- === MODULE FINANCIER === --}}
+            @hasanyrole(['super_admin', 'directeur', 'comptable'])
+                <div class="nav-section-label mt-2 mb-1 px-3" style="font-size:0.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.45);font-weight:600;">Finance</div>
+                <a href="{{ route('paiements.index') }}" class="nav-link {{ request()->routeIs('paiements.index') || request()->routeIs('paiements.create') ? 'active' : '' }}"><i class='bx bxs-wallet'></i> Paiements</a>
+                <a href="{{ route('paiements.suivi') }}" class="nav-link {{ request()->routeIs('paiements.suivi') ? 'active' : '' }}"><i class='bx bx-search-alt'></i> Suivi Mensualités</a>
+                <a href="{{ route('rapports.financier') }}" class="nav-link {{ request()->routeIs('rapports.financier') ? 'active' : '' }}"><i class='bx bxs-pie-chart-alt-2'></i> Rapport Financier</a>
+                <a href="{{ route('depenses.index') }}" class="nav-link {{ request()->routeIs('depenses.*') ? 'active' : '' }}"><i class='bx bx-money-withdraw'></i> Dépenses</a>
+            @endhasanyrole
+
+            {{-- === PARAMÈTRES === --}}
+            @hasanyrole(['super_admin', 'directeur'])
+                <a href="{{ route('settings.index') }}" class="nav-link {{ request()->routeIs('settings.*') || request()->routeIs('users.*') || request()->routeIs('niveaux.*') ? 'active' : '' }}"><i class='bx bxs-cog'></i> Admin & Paramètres</a>
+            @endhasanyrole
+
+            {{-- Comptable : lien direct vers Niveaux & Tarifs --}}
+            @role('comptable')
+                <a href="{{ route('niveaux.index') }}" class="nav-link {{ request()->routeIs('niveaux.*') ? 'active' : '' }}"><i class='bx bxs-bar-chart-alt-2'></i> Niveaux & Tarifs</a>
+            @endrole
         </nav>
     </div>
 

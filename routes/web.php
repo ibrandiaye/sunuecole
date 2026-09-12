@@ -26,96 +26,142 @@ Route::post('logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     
+    // === Routes communes (tous les utilisateurs authentifiés) ===
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // Gestion des Élèves
-    Route::resource('eleves', EleveController::class)->parameters(['eleves' => 'eleve']);
-
-    // Gestion des Tuteurs / Parents
-    Route::post('tuteurs/{tuteur}/toggle', [TuteurController::class, 'toggleStatus'])->name('tuteurs.toggle');
-    Route::resource('tuteurs', TuteurController::class)->parameters(['tuteurs' => 'tuteur'])->only(['index', 'edit', 'update']);
-
-    // Gestion des Classes
-    Route::post('classes/{classe}/matieres', [ClasseController::class, 'attachMatiere'])->name('classes.matieres.attach');
-    Route::delete('classes/{classe}/matieres/{matiere}', [ClasseController::class, 'detachMatiere'])->name('classes.matieres.detach');
-    Route::resource('classes', ClasseController::class)->parameters(['classes' => 'classe']);
-
-    // Gestion des Enseignants
-    Route::resource('enseignants', EnseignantController::class)->parameters(['enseignants' => 'enseignant']);
-
-    // Gestion des Matières
-    Route::resource('matieres', MatiereController::class)->parameters(['matieres' => 'matiere']);
-
-    // Gestion des Emplois du Temps
-    Route::resource('emplois', EmploiController::class)->parameters(['emplois' => 'emploi']);
-
-    // Gestion des Notes
-    Route::resource('notes', NoteController::class)->only(['index', 'store']);
-
-    // Espace Professeur (Mobile-friendly)
+    // === Espace Professeur (Mobile-friendly) ===
     Route::prefix('professeur')->name('professeur.')->group(function () {
-        // Dashboard
         Route::get('/', [\App\Http\Controllers\Web\ProfesseurController::class, 'dashboard'])->name('dashboard');
-
-        // Notes
         Route::get('notes', [NoteController::class, 'mobileIndex'])->name('notes.index');
         Route::get('notes/devoirs', [NoteController::class, 'mobileDevoirs'])->name('notes.devoirs');
         Route::post('notes/evaluations', [NoteController::class, 'storeEvaluationWeb'])->name('notes.evaluations.store');
         Route::get('notes/saisie', [NoteController::class, 'mobileSaisie'])->name('notes.saisie');
         Route::post('notes/store', [NoteController::class, 'mobileStore'])->name('notes.store');
-
-        // Absences & Cahier de textes
         Route::get('absences', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesIndex'])->name('absences.index');
         Route::get('absences/appel', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesAppel'])->name('absences.appel');
         Route::post('absences/store', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesStore'])->name('absences.store');
         Route::get('absences/historique', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesHistorique'])->name('absences.historique');
     });
 
-    // Gestion des Bulletins
-    Route::get('bulletins', [BulletinController::class, 'index'])->name('bulletins.index');
-    Route::get('bulletins/{eleve}/generate', [BulletinController::class, 'generate'])->name('bulletins.generate');
-    Route::get('bulletins/verify/{token}', [BulletinController::class, 'verify'])->name('bulletins.verify');
+    // =========================================================
+    // === ROUTES FINANCIÈRES : super_admin | directeur | comptable
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur|comptable'])->group(function () {
 
-    // Gestion des Absences
-    Route::resource('absences', AbsenceController::class)->only(['index', 'store']);
+        // Paiements
+        Route::get('paiements/suivi/mensualites', [PaiementController::class, 'suivi'])->name('paiements.suivi');
+        Route::get('paiements/get-amount', [PaiementController::class, 'getAmount'])->name('paiements.getAmount');
+        Route::resource('paiements', PaiementController::class);
+        Route::get('paiements/{paiement}/receipt', [PaiementController::class, 'receipt'])->name('paiements.receipt');
 
-    // Gestion des Convocations / Sanctions
-    Route::resource('convocations', ConvocationController::class)->only(['index', 'create', 'store', 'destroy']);
+        // Rapport Financier
+        Route::get('rapport-financier', [\App\Http\Controllers\Web\RapportController::class, 'financier'])->name('rapports.financier');
 
-    // Gestion des Dépenses
-    Route::resource('depenses', \App\Http\Controllers\Web\DepenseController::class)->except(['show']);
+        // Dépenses
+        Route::resource('depenses', \App\Http\Controllers\Web\DepenseController::class)->except(['show']);
 
-    // Gestion des Inscriptions
-    Route::resource('inscriptions', InscriptionController::class)->except(['edit', 'update', 'show']);
+        // Types de Frais
+        Route::resource('types_paiements', \App\Http\Controllers\Web\TypePaiementController::class);
 
-    // Gestion des Paiements
-    Route::get('paiements/suivi/mensualites', [PaiementController::class, 'suivi'])->name('paiements.suivi');
-    Route::get('paiements/get-amount', [PaiementController::class, 'getAmount'])->name('paiements.getAmount');
-    Route::resource('paiements', PaiementController::class);
-    Route::get('paiements/{paiement}/receipt', [PaiementController::class, 'receipt'])->name('paiements.receipt');
-    Route::get('rapport-financier', [\App\Http\Controllers\Web\RapportController::class, 'financier'])->name('rapports.financier');
+        // Niveaux & Tarifs (lecture + mise à jour tarifs)
+        Route::resource('niveaux', NiveauController::class)->parameters(['niveaux' => 'niveau']);
+        Route::post('niveaux/{niveau}/tarifs', [NiveauController::class, 'updateTarifs'])->name('niveaux.tarifs.update');
+    });
 
-    // Paramètres Globaux & Configuration
+    // =========================================================
+    // === ROUTES READ-ONLY (comptable + administratif + admin) ===
+    // Vue des élèves, classes, inscriptions, tuteurs — accessible aux deux rôles staff
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur|comptable|administratif'])->group(function () {
+        Route::get('eleves', [EleveController::class, 'index'])->name('eleves.index');
+        Route::get('eleves/{eleve}', [EleveController::class, 'show'])->name('eleves.show');
+        Route::get('classes', [ClasseController::class, 'index'])->name('classes.index');
+        Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
+        Route::get('tuteurs', [TuteurController::class, 'index'])->name('tuteurs.index');
+    });
+
+    // =========================================================
+    // === ROUTES ADMINISTRATIVES : super_admin | directeur | administratif
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur|administratif'])->group(function () {
+
+        // Élèves — opérations d'écriture (create/edit/delete)
+        Route::get('eleves/create', [EleveController::class, 'create'])->name('eleves.create');
+        Route::post('eleves', [EleveController::class, 'store'])->name('eleves.store');
+        Route::get('eleves/{eleve}/edit', [EleveController::class, 'edit'])->name('eleves.edit');
+        Route::put('eleves/{eleve}', [EleveController::class, 'update'])->name('eleves.update');
+        Route::patch('eleves/{eleve}', [EleveController::class, 'update']);
+        Route::delete('eleves/{eleve}', [EleveController::class, 'destroy'])->name('eleves.destroy');
+
+        // Tuteurs — opérations d'écriture
+        Route::post('tuteurs/{tuteur}/toggle', [TuteurController::class, 'toggleStatus'])->name('tuteurs.toggle');
+        Route::get('tuteurs/{tuteur}/edit', [TuteurController::class, 'edit'])->name('tuteurs.edit');
+        Route::put('tuteurs/{tuteur}', [TuteurController::class, 'update'])->name('tuteurs.update');
+        Route::patch('tuteurs/{tuteur}', [TuteurController::class, 'update']);
+
+        // Classes — opérations d'écriture
+        Route::post('classes/{classe}/matieres', [ClasseController::class, 'attachMatiere'])->name('classes.matieres.attach');
+        Route::delete('classes/{classe}/matieres/{matiere}', [ClasseController::class, 'detachMatiere'])->name('classes.matieres.detach');
+        Route::get('classes/create', [ClasseController::class, 'create'])->name('classes.create');
+        Route::post('classes', [ClasseController::class, 'store'])->name('classes.store');
+        Route::get('classes/{classe}', [ClasseController::class, 'show'])->name('classes.show');
+        Route::get('classes/{classe}/edit', [ClasseController::class, 'edit'])->name('classes.edit');
+        Route::put('classes/{classe}', [ClasseController::class, 'update'])->name('classes.update');
+        Route::patch('classes/{classe}', [ClasseController::class, 'update']);
+        Route::delete('classes/{classe}', [ClasseController::class, 'destroy'])->name('classes.destroy');
+
+        // Enseignants
+        Route::resource('enseignants', EnseignantController::class)->parameters(['enseignants' => 'enseignant']);
+
+        // Matières
+        Route::resource('matieres', MatiereController::class)->parameters(['matieres' => 'matiere']);
+
+        // Emplois du Temps
+        Route::resource('emplois', EmploiController::class)->parameters(['emplois' => 'emploi']);
+
+        // Notes
+        Route::resource('notes', NoteController::class)->only(['index', 'store']);
+
+        // Bulletins
+        Route::get('bulletins', [BulletinController::class, 'index'])->name('bulletins.index');
+        Route::get('bulletins/{eleve}/generate', [BulletinController::class, 'generate'])->name('bulletins.generate');
+        Route::get('bulletins/verify/{token}', [BulletinController::class, 'verify'])->name('bulletins.verify');
+
+        // Absences
+        Route::resource('absences', AbsenceController::class)->only(['index', 'store']);
+
+        // Convocations
+        Route::resource('convocations', ConvocationController::class)->only(['index', 'create', 'store', 'destroy']);
+
+        // Inscriptions — opérations d'écriture (index déjà défini en read-only)
+        Route::get('inscriptions/create', [InscriptionController::class, 'create'])->name('inscriptions.create');
+        Route::post('inscriptions', [InscriptionController::class, 'store'])->name('inscriptions.store');
+        Route::delete('inscriptions/{inscription}', [InscriptionController::class, 'destroy'])->name('inscriptions.destroy');
+
+        // Paramètres administratifs (salles, séries)
+        Route::resource('salles', \App\Http\Controllers\Web\SalleController::class);
+        Route::resource('series', \App\Http\Controllers\Web\SerieController::class);
+    });
+
+    // =========================================================
+    // === PARAMÈTRES GLOBAUX : super_admin | directeur
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur'])->group(function () {
+        Route::resource('etablissements', \App\Http\Controllers\Web\EtablissementController::class);
+        Route::post('annee_scolaires/{annee_scolaire}/activate', [\App\Http\Controllers\Web\AnneeScolaireController::class, 'activate'])->name('annee_scolaires.activate');
+        Route::resource('annee_scolaires', \App\Http\Controllers\Web\AnneeScolaireController::class);
+    });
+
+    // Page Paramètres (visible par tous les rôles staff)
     Route::get('parametres', [\App\Http\Controllers\Web\SettingsController::class, 'index'])->name('settings.index');
-    Route::resource('etablissements', \App\Http\Controllers\Web\EtablissementController::class);
-    Route::post('annee_scolaires/{annee_scolaire}/activate', [\App\Http\Controllers\Web\AnneeScolaireController::class, 'activate'])->name('annee_scolaires.activate');
-    Route::resource('annee_scolaires', \App\Http\Controllers\Web\AnneeScolaireController::class);
-    Route::resource('salles', \App\Http\Controllers\Web\SalleController::class);
-    Route::resource('series', \App\Http\Controllers\Web\SerieController::class);
-    Route::resource('types_paiements', \App\Http\Controllers\Web\TypePaiementController::class);
 
-    // Gestion des Niveaux et Tarifs
-    Route::resource('niveaux', NiveauController::class)->parameters(['niveaux' => 'niveau']);
-    Route::post('niveaux/{niveau}/tarifs', [NiveauController::class, 'updateTarifs'])->name('niveaux.tarifs.update');
-
-    // Gestion des Utilisateurs (Admin seulement)
-    Route::group(['middleware' => ['role:super_admin']], function () {
+    // === Gestion des Utilisateurs (super_admin seulement) ===
+    Route::middleware(['role:super_admin'])->group(function () {
         Route::resource('users', UserController::class);
         Route::post('users/{user}/toggle', [UserController::class, 'toggleStatus'])->name('users.toggle');
     });
-
-    // Profil (Personnel)
-    Route::get('profile', [ProfileController::class, 'index'])->name('profile.index');
-    Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 });
+
