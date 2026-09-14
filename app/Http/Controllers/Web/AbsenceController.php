@@ -74,7 +74,7 @@ class AbsenceController extends Controller
         // 2. Enregistrement des présences/absences
         foreach ($data['absences'] as $absData) {
             if ($absData['statut'] != 'present') {
-                Absence::updateOrCreate(
+                $absence = Absence::updateOrCreate(
                     [
                         'eleve_id' => $absData['eleve_id'],
                         'date_absence' => $data['date_absence'],
@@ -91,6 +91,17 @@ class AbsenceController extends Controller
                         'cahier_texte_id' => $cahierTexte->id,
                     ]
                 );
+
+                if ($absence->wasRecentlyCreated) {
+                    $eleveModel = Eleve::find($absData['eleve_id']);
+                    if ($eleveModel) {
+                        $notifService = app(\App\Services\NotificationService::class);
+                        $typeAbs = $absData['statut'] == 'retard' ? 'en retard' : 'absent(e)';
+                        $titre = $absData['statut'] == 'retard' ? "Retard enregistré" : "Absence enregistrée";
+                        $msg = "{$eleveModel->prenom} {$eleveModel->nom} a été marqué {$typeAbs} le " . date('d/m/Y', strtotime($data['date_absence'])) . " de {$data['heure_debut']} à {$data['heure_fin']}.";
+                        $notifService->sendToEleveAndTuteur($eleveModel, $titre, $msg, 'absence');
+                    }
+                }
             } else {
                 // Si l'élève était marqué absent/en retard pour CETTE matière et on le remet présent
                 Absence::where('eleve_id', $absData['eleve_id'])

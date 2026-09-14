@@ -26,6 +26,8 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('eleve/notes', [EleveApiController::class, 'getNotes']);
     Route::get('eleve/absences', [EleveApiController::class, 'getAbsences']);
     Route::get('eleve/convocations', [EleveApiController::class, 'getConvocations']);
+    // Suivi des paiements — Élève
+    Route::get('eleve/paiements', [EleveApiController::class, 'getPaiements']);
     
     // Endpoints pour les Parents
     Route::get('parent/profil', [\App\Http\Controllers\Api\ParentApiController::class, 'getProfil']);
@@ -33,6 +35,9 @@ Route::middleware(['auth:api'])->group(function () {
     Route::get('parent/enfant/{id}/absences', [\App\Http\Controllers\Api\ParentApiController::class, 'getAbsencesEnfant']);
     Route::get('parent/enfant/{id}/emploi-du-temps', [\App\Http\Controllers\Api\ParentApiController::class, 'getEmploiDuTempsEnfant']);
     Route::get('parent/enfant/{id}/convocations', [\App\Http\Controllers\Api\ParentApiController::class, 'getConvocationsEnfant']);
+    // Suivi des paiements — Parent
+    Route::get('parent/paiements',                [\App\Http\Controllers\Api\ParentApiController::class, 'getPaiementsSommaire']);
+    Route::get('parent/enfant/{id}/paiements',    [\App\Http\Controllers\Api\ParentApiController::class, 'getPaiementsEnfant']);
     
     // Endpoints pour les Enseignants
     Route::get('enseignant/classes', [EnseignantApiController::class, 'getClasses']);

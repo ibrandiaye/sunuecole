@@ -85,7 +85,7 @@ class NoteController extends Controller
         
         foreach ($data['notes'] as $noteData) {
             if (isset($noteData['valeur']) && $noteData['valeur'] !== null && $noteData['valeur'] !== '') {
-                Note::updateOrCreate(
+                $note = Note::updateOrCreate(
                     [
                         'eleve_id' => $noteData['eleve_id'],
                         'evaluation_id' => $evaluation->id,
@@ -102,6 +102,20 @@ class NoteController extends Controller
                         'date_evaluation' => $evaluation->date_evaluation ?? now(),
                     ]
                 );
+
+                if ($note->wasRecentlyCreated || $note->wasChanged('valeur')) {
+                    $notifService = app(\App\Services\NotificationService::class);
+                    $eleveModel = \App\Models\Eleve::find($noteData['eleve_id']);
+                    if ($eleveModel) {
+                        $matiereNom = $evaluation->matiere->nom ?? 'une matière';
+                        $notifService->sendToEleveAndTuteur(
+                            $eleveModel,
+                            "Nouvelle note",
+                            "Une note de {$note->valeur} a été attribuée à {$eleveModel->prenom} en {$matiereNom} ({$evaluation->titre}).",
+                            "note"
+                        );
+                    }
+                }
             }
         }
 
@@ -225,6 +239,18 @@ class NoteController extends Controller
             'date_evaluation' => $data['date_evaluation'],
             'coefficient' => $this->getCoefficient($data['classe_id'], $data['matiere_id']),
         ]);
+
+        // Notifications
+        $notifService = app(\App\Services\NotificationService::class);
+        $eleves = \App\Models\Eleve::where('classe_id', $data['classe_id'])->where('statut', 'actif')->get();
+        foreach ($eleves as $eleve) {
+            $notifService->sendToEleveAndTuteur(
+                $eleve,
+                "Évaluation programmée",
+                "Une évaluation de {$data['type_evaluation']} ({$data['titre']}) a été programmée pour le " . date('d/m/Y', strtotime($data['date_evaluation'])) . ".",
+                "devoir"
+            );
+        }
 
         if (str_contains(url()->previous(), '/professeur')) {
             return redirect()->route('professeur.notes.saisie', ['evaluation_id' => $eval->id])

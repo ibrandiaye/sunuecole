@@ -241,6 +241,7 @@
                 <a href="{{ route('bulletins.index') }}" class="nav-link {{ request()->routeIs('bulletins.*') ? 'active' : '' }}"><i class='bx bxs-file-pdf'></i> Bulletins</a>
                 <a href="{{ route('absences.index') }}" class="nav-link {{ request()->routeIs('absences.*') ? 'active' : '' }}"><i class='bx bxs-time-five'></i> Absences</a>
                 <a href="{{ route('convocations.index') }}" class="nav-link {{ request()->routeIs('convocations.*') ? 'active' : '' }}"><i class='bx bxs-error-circle'></i> Convocations</a>
+                <a href="{{ route('notifications.index') }}" class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}"><i class='bx bxs-bell-ring'></i> Notifications</a>
             @endhasanyrole
 
             {{-- Vue élèves/classes/inscriptions/tuteurs pour comptable (lecture seule) --}}
@@ -288,9 +289,12 @@
                     <li><a class="dropdown-item rounded-3" href="{{ route('profile.index') }}"><i class='bx bx-user me-2'></i> Mon Profil</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <form action="{{ route('logout') }}" method="POST" id="logout-form">
+                        <a class="dropdown-item rounded-3 text-danger" href="{{ route('logout') }}"
+                           onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                            <i class='bx bx-log-out me-2'></i> Déconnexion
+                        </a>
+                        <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
                             @csrf
-                            <button type="submit" class="dropdown-item rounded-3 text-danger"><i class='bx bx-log-out me-2'></i> Déconnexion</button>
                         </form>
                     </li>
                 </ul>

@@ -57,6 +57,11 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('paiements', PaiementController::class);
         Route::get('paiements/{paiement}/receipt', [PaiementController::class, 'receipt'])->name('paiements.receipt');
 
+        // Notifications
+        Route::get('notifications', [\App\Http\Controllers\Web\NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/create', [\App\Http\Controllers\Web\NotificationController::class, 'create'])->name('notifications.create');
+        Route::post('notifications', [\App\Http\Controllers\Web\NotificationController::class, 'store'])->name('notifications.store');
+
         // Rapport Financier
         Route::get('rapport-financier', [\App\Http\Controllers\Web\RapportController::class, 'financier'])->name('rapports.financier');
 
@@ -72,23 +77,13 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // =========================================================
-    // === ROUTES READ-ONLY (comptable + administratif + admin) ===
-    // Vue des élèves, classes, inscriptions, tuteurs — accessible aux deux rôles staff
-    // =========================================================
-    Route::middleware(['role:super_admin|directeur|comptable|administratif'])->group(function () {
-        Route::get('eleves', [EleveController::class, 'index'])->name('eleves.index');
-        Route::get('eleves/{eleve}', [EleveController::class, 'show'])->name('eleves.show');
-        Route::get('classes', [ClasseController::class, 'index'])->name('classes.index');
-        Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
-        Route::get('tuteurs', [TuteurController::class, 'index'])->name('tuteurs.index');
-    });
-
-    // =========================================================
     // === ROUTES ADMINISTRATIVES : super_admin | directeur | administratif
     // =========================================================
     Route::middleware(['role:super_admin|directeur|administratif'])->group(function () {
 
         // Élèves — opérations d'écriture (create/edit/delete)
+        Route::get('eleves/import-template', [\App\Http\Controllers\Web\EleveController::class, 'downloadTemplate'])->name('eleves.import_template');
+        Route::post('eleves/import', [\App\Http\Controllers\Web\EleveController::class, 'import'])->name('eleves.import');
         Route::get('eleves/create', [EleveController::class, 'create'])->name('eleves.create');
         Route::post('eleves', [EleveController::class, 'store'])->name('eleves.store');
         Route::get('eleves/{eleve}/edit', [EleveController::class, 'edit'])->name('eleves.edit');
@@ -144,6 +139,18 @@ Route::middleware(['auth'])->group(function () {
         // Paramètres administratifs (salles, séries)
         Route::resource('salles', \App\Http\Controllers\Web\SalleController::class);
         Route::resource('series', \App\Http\Controllers\Web\SerieController::class);
+    });
+
+    // =========================================================
+    // === ROUTES READ-ONLY (comptable + administratif + admin) ===
+    // Vue des élèves, classes, inscriptions, tuteurs — accessible aux deux rôles staff
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur|comptable|administratif'])->group(function () {
+        Route::get('eleves', [EleveController::class, 'index'])->name('eleves.index');
+        Route::get('eleves/{eleve}', [EleveController::class, 'show'])->name('eleves.show');
+        Route::get('classes', [ClasseController::class, 'index'])->name('classes.index');
+        Route::get('inscriptions', [InscriptionController::class, 'index'])->name('inscriptions.index');
+        Route::get('tuteurs', [TuteurController::class, 'index'])->name('tuteurs.index');
     });
 
     // =========================================================

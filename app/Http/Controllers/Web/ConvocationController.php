@@ -57,9 +57,17 @@ class ConvocationController extends Controller
 
         $data['parent_informe'] = $request->has('parent_informe') ? true : false;
 
-        Convocation::create($data);
+        $convocation = Convocation::create($data);
 
         $eleve = Eleve::find($data['eleve_id']);
+
+        $notifService = app(\App\Services\NotificationService::class);
+        $notifService->sendToEleveAndTuteur(
+            $eleve,
+            "Nouvelle convocation",
+            "L'élève {$eleve->prenom} {$eleve->nom} est convoqué(e) le " . date('d/m/Y', strtotime($data['date_convocation'])) . " (Motif: {$data['motif']}).",
+            "convocation"
+        );
 
         return redirect()->route('convocations.index', ['classe_id' => $eleve->classe_id])
             ->with('success', 'Convocation ajoutée avec succès.');

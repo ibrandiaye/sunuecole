@@ -9,9 +9,14 @@
         <div class="card p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5 class="fw-bold mb-0"><i class='bx bx-list-ul me-2 text-primary'></i>Liste des inscrits</h5>
-                <a href="{{ route('eleves.create', isset($selected_classe_id) ? ['classe_id' => $selected_classe_id] : []) }}" class="btn btn-primary">
-                    <i class='bx bx-plus-circle me-1'></i> Nouvel Élève
-                </a>
+                <div>
+                    <button type="button" class="btn btn-outline-success me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class='bx bx-import me-1'></i> Importer
+                    </button>
+                    <a href="{{ route('eleves.create', isset($selected_classe_id) ? ['classe_id' => $selected_classe_id] : []) }}" class="btn btn-primary">
+                        <i class='bx bx-plus-circle me-1'></i> Nouvel Élève
+                    </a>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -134,4 +139,38 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Import -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form action="{{ route('eleves.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel"><i class='bx bx-import me-2'></i>Importer des Élèves</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Téléchargez le modèle ci-dessous, remplissez-le sans modifier les en-têtes de colonnes, puis importez-le ici.
+                    </p>
+                    <div class="mb-3">
+                        <a href="{{ route('eleves.import_template') }}" class="btn btn-sm btn-outline-primary">
+                            <i class='bx bxs-download me-1'></i> Télécharger le modèle (Excel)
+                        </a>
+                    </div>
+                    <div class="mb-3">
+                        <label for="fichier_excel" class="form-label fw-bold">Fichier (Excel/CSV)</label>
+                        <input class="form-control" type="file" id="fichier_excel" name="fichier_excel" accept=".xlsx, .xls, .csv" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Lancer l'importation</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection

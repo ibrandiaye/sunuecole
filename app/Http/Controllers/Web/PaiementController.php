@@ -86,6 +86,14 @@ class PaiementController extends Controller
             'encaisse_par' => auth()->id()
         ]);
 
+        $notifService = app(\App\Services\NotificationService::class);
+        $notifService->sendToEleveAndTuteur(
+            $eleve,
+            "Nouveau paiement",
+            "Un paiement de " . number_format($paiement->montant_paye, 0, ',', ' ') . " FCFA a été enregistré pour {$eleve->prenom} {$eleve->nom} (Rubrique: {$type->nom}).",
+            "paiement"
+        );
+
         return redirect()->route('paiements.index')
             ->with('success', "Paiement de {$paiement->montant_paye} FCFA encaissé avec succès !");
     }
@@ -267,11 +275,9 @@ class PaiementController extends Controller
             }
 
             if ($code === 'INSCR') {
-                $base = $classe->getEffectiveTarif('INSCR') ?? $tarifBase;
-                $tarifBase = $base + $optionsAmount;
+                $tarifBase = $classe->getEffectiveTarif('INSCR') ?? $tarifBase;
             } elseif ($code === 'MENS') {
-                $base = $classe->getEffectiveTarif('MENS') ?? $tarifBase;
-                $tarifBase = $base + $optionsAmount;
+                $tarifBase = $classe->getEffectiveTarif('MENS') ?? $tarifBase;
             } elseif ($code === 'CANT') {
                 $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_cantine) 
                     ? $montantCantine 

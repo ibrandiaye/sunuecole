@@ -10,6 +10,10 @@ use App\Models\Classe;
 use App\Services\EleveService;
 use Illuminate\Http\Request;
 
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ElevesTemplateExport;
+use App\Imports\ElevesImport;
+
 class EleveController extends Controller
 {
     protected $eleveService;
@@ -133,5 +137,32 @@ class EleveController extends Controller
         $eleve->delete();
         return redirect()->route('eleves.index')
             ->with('success', 'Élève supprimé avec succès.');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new ElevesTemplateExport, 'modele_import_eleves.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'fichier_excel' => 'required|mimes:xlsx,xls,csv|max:10240'
+        ]);
+
+        try {
+            $import = new ElevesImport($this->eleveService);
+            Excel::import($import, $request->file('fichier_excel'));
+            
+            $msg = $import->importedCount . " élève(s) importé(s) avec succès.";
+            if (count($import->errors) > 0) {
+                $msg .= " Cependant, il y a eu " . count($import->errors) . " erreur(s).";
+                return redirect()->route('eleves.index')->with('warning', $msg)->with('import_errors', $import->errors);
+            }
+
+            return redirect()->route('eleves.index')->with('success', $msg);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Erreur lors de l\'importation : ' . $e->getMessage());
+        }
     }
 }
