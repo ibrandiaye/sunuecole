@@ -1,5 +1,5 @@
 <?php
-$files = ['app/Http/Controllers/Web/NotificationController.php', 'app/Services/NotificationService.php'];
+$files = ['app/Models/Recu.php'];
 foreach($files as $file) {
     if (!file_exists($file)) continue;
     $content = file_get_contents($file);

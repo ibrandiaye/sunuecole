@@ -175,7 +175,7 @@
         }
         .nav-pills .nav-link.active
         {
-            color: #fff !important;
+            color: #005c37 !important;
         }
 
         .btn-primary:hover {

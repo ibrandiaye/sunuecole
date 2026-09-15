@@ -1,10 +1,12 @@
-<?php
+﻿<?php
 namespace App\Services;
 
 use App\Models\NotificationPush;
 use App\Models\User;
 use App\Models\Eleve;
 use Illuminate\Support\Facades\Log;
+use Google\Client;
+use Illuminate\Support\Facades\Http;
 
 class NotificationService
 {
@@ -13,7 +15,6 @@ class NotificationService
      */
     public function sendToUser(User $user, string $title, string $message, string $type = 'info', array $data = [])
     {
-        // 1. Sauvegarder dans la base de données
         $notification = NotificationPush::create([
             'user_id' => $user->id,
             'titre' => $title,
@@ -22,7 +23,6 @@ class NotificationService
             'data' => $data,
         ]);
 
-        // 2. Envoyer par FCM si le token existe
         if (!empty($user->fcm_token)) {
             $this->sendFcmPush($user->fcm_token, $title, $message, $data);
         }
@@ -30,55 +30,68 @@ class NotificationService
         return $notification;
     }
 
-    /**
-     * Envoie une notification concernant un élève à l'élève lui-même et à son tuteur
-     */
     public function sendToEleveAndTuteur(Eleve $eleve, string $title, string $message, string $type = 'info', array $data = [])
     {
-        // Notifier l'élève s'il a un compte
         if ($eleve->user_id) {
             $userEleve = User::find($eleve->user_id);
-            if ($userEleve) {
-                $this->sendToUser($userEleve, $title, $message, $type, $data);
-            }
+            if ($userEleve) $this->sendToUser($userEleve, $title, $message, $type, $data);
         }
 
-        // Notifier le tuteur s'il a un compte
         if ($eleve->parent_id) {
             $parent = $eleve->parent;
             if ($parent && $parent->user_id) {
                 $userTuteur = User::find($parent->user_id);
-                if ($userTuteur) {
-                    $this->sendToUser($userTuteur, $title, $message, $type, $data);
-                }
+                if ($userTuteur) $this->sendToUser($userTuteur, $title, $message, $type, $data);
             }
         }
     }
 
-    /**
-     * Envoie un push Firebase Cloud Messaging (FCM)
-     */
     protected function sendFcmPush($token, $title, $body, $data)
     {
-        // TODO: Pour envoyer la notification push vers le mobile,
-        // vous devez configurer le SDK Firebase (ex: kreait/laravel-firebase)
-        // ou utiliser cURL avec l'API v1 de Firebase (nécessite firebase_credentials.json).
-        
-        Log::info("FCM Push ready to be sent to token: {$token}", [
-            'title' => $title,
-            'body' => $body
-        ]);
-        
-        /* Exemple avec kreait/laravel-firebase une fois installé :
         try {
-            $messaging = app('firebase.messaging');
-            $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
-                ->withNotification(\Kreait\Firebase\Messaging\Notification::create($title, $body))
-                ->withData($data);
-            $messaging->send($message);
+            $credentialsPath = storage_path('app/firebase_credentials.json');
+
+            if (!file_exists($credentialsPath)) {
+                Log::warning("FCM Credentials not found at {$credentialsPath}");
+                return;
+            }
+
+            $client = new Client();
+            $client->setAuthConfig($credentialsPath);
+            $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+            $client->useApplicationDefaultCredentials();
+
+            $tokenData = $client->fetchAccessTokenWithAssertion();
+            if (!isset($tokenData['access_token'])) {
+                Log::error("FCM Token generation failed", $tokenData);
+                return;
+            }
+            $accessToken = $tokenData['access_token'];
+
+            $projectId = json_decode(file_get_contents($credentialsPath))->project_id;
+
+            $message = [
+                'message' => [
+                    'token' => $token,
+                    'notification' => [
+                        'title' => $title,
+                        'body' => $body,
+                    ],
+                    'data' => empty($data) ? (object)[] : $data
+                ]
+            ];
+
+            $response = Http::withToken($accessToken)
+                ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", $message);
+
+            if ($response->successful()) {
+                Log::info("FCM Push sent successfully to token: {$token}");
+            } else {
+                Log::error("FCM Push failed: " . $response->body());
+            }
+
         } catch (\Exception $e) {
             Log::error("Erreur FCM: " . $e->getMessage());
         }
-        */
     }
 }

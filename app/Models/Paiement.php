@@ -41,4 +41,9 @@ class Paiement extends Model
     {
         return $this->belongsTo(User::class, 'encaisse_par');
     }
+
+    public function recu()
+    {
+        return $this->hasOne(Recu::class);
+    }
 }
