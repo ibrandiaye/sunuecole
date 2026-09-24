@@ -32,6 +32,8 @@ class UpdateEleveRequest extends FormRequest
             'remise_mensualite' => 'nullable|numeric|min:0',
             'avec_cantine' => 'nullable|boolean',
             'avec_transport' => 'nullable|boolean',
+            'zone_transport_id' => 'required_if:avec_transport,1|nullable|exists:zone_transports,id',
+            'vehicule_id' => 'required_if:avec_transport,1|nullable|exists:vehicules,id',
         ];
     }
 }

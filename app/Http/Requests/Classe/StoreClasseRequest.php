@@ -20,10 +20,6 @@ class StoreClasseRequest extends FormRequest
             'salle_id' => 'nullable|exists:salles,id',
             'effectif_max' => 'required|integer|min:1|max:100',
             'active' => 'boolean',
-            'montant_inscription' => 'nullable|numeric|min:0',
-            'montant_mensualite' => 'nullable|numeric|min:0',
-            'montant_cantine' => 'nullable|numeric|min:0',
-            'montant_transport' => 'nullable|numeric|min:0',
         ];
     }
 }

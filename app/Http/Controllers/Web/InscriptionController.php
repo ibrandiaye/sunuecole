@@ -41,8 +41,9 @@ class InscriptionController extends Controller
         $eleves = $query->get();
         $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
         $annees = AnneeScolaire::all();
+        $zones = \App\Models\ZoneTransport::all();
 
-        return view('inscriptions.create', compact('eleves', 'classes', 'annees', 'selected_eleve', 'selected_classe_id', 'anneeActive'));
+        return view('inscriptions.create', compact('eleves', 'classes', 'annees', 'selected_eleve', 'selected_classe_id', 'anneeActive', 'zones'));
     }
 
     public function store(Request $request)
@@ -54,6 +55,9 @@ class InscriptionController extends Controller
             'date_inscription' => 'required|date',
             'remise_inscription' => 'nullable|numeric|min:0',
             'remise_mensualite' => 'nullable|numeric|min:0',
+            'avec_transport' => 'nullable|boolean',
+            'zone_transport_id' => 'required_if:avec_transport,1|nullable|exists:zone_transports,id',
+            'vehicule_id' => 'required_if:avec_transport,1|nullable|exists:vehicules,id',
         ]);
 
         // Vérifier si déjà inscrit pour cette année
@@ -70,6 +74,26 @@ class InscriptionController extends Controller
         $data['avec_transport'] = $request->boolean('avec_transport');
 
         $inscription = Inscription::create($data);
+
+        // Gestion Cantine
+        if ($data['avec_cantine']) {
+            \App\Models\AbonnementCantine::firstOrCreate([
+                'eleve_id' => $request->eleve_id,
+                'date_debut' => now(),
+                'actif' => true,
+            ]);
+        }
+        
+        // Gestion Transport
+        if ($data['avec_transport'] && $request->has('zone_transport_id')) {
+            \App\Models\AbonnementTransport::firstOrCreate([
+                'eleve_id' => $request->eleve_id,
+                'zone_transport_id' => $request->zone_transport_id,
+                'vehicule_id' => $request->vehicule_id,
+                'date_debut' => now(),
+                'actif' => true,
+            ]);
+        }
 
         // Mettre à jour la classe actuelle de l'élève (si c'est l'année en cours)
         $anneeActive = AnneeScolaire::where('active', true)->first();

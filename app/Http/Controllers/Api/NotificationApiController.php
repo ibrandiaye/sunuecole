@@ -40,4 +40,20 @@ class NotificationApiController extends Controller
             'data' => $notifications
         ]);
     }
+
+    /**
+     * Marquer une notification comme lue.
+     */
+    public function markAsRead($id)
+    {
+        $notification = Auth::user()->notifications()->find($id);
+        if ($notification) {
+            $notification->lu = true;
+            $notification->save();
+        }
+
+        return response()->json([
+            'status' => 'success'
+        ]);
+    }
 }

@@ -85,7 +85,10 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">Définissez les montants spécifiques pour ce niveau. Si laissé tel quel, les montants par défaut seront utilisés.</p>
+                    <p class="text-muted small mb-3">Définissez les montants spécifiques pour ce niveau (Inscription, Mensualité, Cantine). Si laissé tel quel, les montants par défaut seront appliqués.</p>
+                    <div class="alert alert-light border small text-muted mb-4 py-2">
+                        <i class='bx bx-bus text-info me-1'></i> <strong>Transport scolaire :</strong> Le tarif n'est pas lié au niveau mais à la <em>Zone de transport</em> de l'élève (géré dans <a href="{{ route('zone_transports.index') }}" class="text-primary fw-semibold" target="_blank">Logistique &gt; Zones</a>).
+                    </div>
                     @foreach($types_paiement as $type)
                         @php 
                             $tarifActuel = $niveau->tarifs->where('type_paiement_id', $type->id)->first();

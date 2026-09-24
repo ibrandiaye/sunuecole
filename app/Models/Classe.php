@@ -71,22 +71,14 @@ class Classe extends Model
     }
 
     /**
-     * Récupère le tarif effectif pour un type de paiement donné (INSCR, MENS, CANT, TRANSP).
-     * Priorité 1: Montant spécifique à la classe
-     * Priorité 2: Tarif configuré pour le niveau (année scolaire active)
+     * Récupère le tarif effectif pour un type de paiement donné (INSCR, MENS, CANT).
+     * Les tarifs sont configurés au niveau du Niveau académique (Paramètres > Niveaux & Tarifs).
+     * Le transport (TRANSP) dépend exclusivement des zones de transport.
      */
     public function getEffectiveTarif(string $code): ?float
     {
-        $field = match($code) {
-            'INSCR'  => 'montant_inscription',
-            'MENS'   => 'montant_mensualite',
-            'CANT'   => 'montant_cantine',
-            'TRANSP' => 'montant_transport',
-            default  => null,
-        };
-
-        if ($field && $this->$field !== null) {
-            return (float) $this->$field;
+        if ($code === 'TRANSP') {
+            return null;
         }
 
         $activeYear = \App\Models\AnneeScolaire::where('active', true)->first();
@@ -100,6 +92,7 @@ class Classe extends Model
                 if ($tarif) {
                     return (float) $tarif->montant;
                 }
+                return (float) $type->montant_defaut;
             }
         }
 

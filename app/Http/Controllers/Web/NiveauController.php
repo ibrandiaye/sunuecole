@@ -17,7 +17,7 @@ class NiveauController extends Controller
         }])->orderBy('ordre')->get();
         
         $cycles = \App\Models\Cycle::all();
-        $types_paiement = \App\Models\TypePaiement::all();
+        $types_paiement = \App\Models\TypePaiement::where('code', '!=', 'TRANSP')->get();
         
         return view('niveaux.index', compact('niveaux', 'cycles', 'types_paiement'));
     }
@@ -58,7 +58,14 @@ class NiveauController extends Controller
             'tarifs.*' => 'numeric|min:0'
         ]);
 
+        $typeTransport = \App\Models\TypePaiement::where('code', 'TRANSP')->first();
+        $transpId = $typeTransport ? $typeTransport->id : null;
+
         foreach ($request->tarifs as $type_id => $montant) {
+            if ($transpId && $type_id == $transpId) {
+                continue; // Le transport dépend uniquement des zones
+            }
+
             \App\Models\Tarif::updateOrCreate(
                 [
                     'annee_scolaire_id' => $activeYear->id,

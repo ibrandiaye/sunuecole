@@ -74,8 +74,7 @@
                                             <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalInscrireEleve"
                                                 data-classe-id="{{ $classe->id }}"
                                                 data-classe-nom="{{ $classe->nom }}"
-                                                data-cantine="{{ $classe->montant_cantine ?? 0 }}"
-                                                data-transport="{{ $classe->montant_transport ?? 0 }}">
+                                                data-cantine="{{ $classe->getEffectiveTarif('CANT') ?? 0 }}">
                                                 <i class='bx bx-user-check me-2 text-primary'></i> Inscrire un élève existant
                                             </button>
                                         </li>
@@ -152,7 +151,7 @@
                             <option value=""></option>
                             @foreach($elevesNonInscrits as $el)
                                 <option value="{{ $el->id }}">
-                                    {{ $el->nom }} {{ $el->prenom }} &bull; {{ $el->matricule }}
+                                    {{ $el->nom }} {{ $el->prenom }} • {{ $el->matricule }}
                                 </option>
                             @endforeach
                         @endif
@@ -183,11 +182,24 @@
                         </div>
                         <div class="col-12">
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="modal_avec_transport" value="1">
+                                <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="modal_avec_transport" value="1" onchange="toggleModalZoneSelect()">
                                 <label class="form-check-label fw-semibold" for="modal_avec_transport">
                                     <i class='bx bx-bus text-info me-1'></i> Transport Scolaire
-                                    <span id="modal_transport_tarif" class="badge bg-info-subtle text-dark border ms-1 d-none"></span>
                                 </label>
+                            </div>
+                            <div id="modal_zone_transport_container" style="display: none;">
+                                <label class="form-label small mt-2">Choisir la Zone :</label>
+                                <select name="zone_transport_id" id="modal_zone_select" class="form-select form-select-sm" onchange="loadVehiculesPourZone(this.value, document.getElementById('modal_vehicule_select'))">
+                                    <option value="">Sélectionner une zone...</option>
+                                    @foreach($zones ?? [] as $zone)
+                                        <option value="{{ $zone->id }}">{{ $zone->nom }} ({{ number_format($zone->tarif_mensuel, 0, ',', ' ') }} F)</option>
+                                    @endforeach
+                                </select>
+                                <label class="form-label small mt-2">Véhicule <span class="text-danger">*</span></label>
+                                <select name="vehicule_id" id="modal_vehicule_select" class="form-select form-select-sm">
+                                    <option value="">Choisir d'abord une zone...</option>
+                                </select>
+                                <small class="text-muted">Les places disponibles s'affichent en temps réel.</small>
                             </div>
                         </div>
                     </div>
@@ -224,6 +236,31 @@
 </div>
 
 <script>
+function loadVehiculesPourZone(zoneId, selectEl) {
+    if(!zoneId) { selectEl.innerHTML = '<option value="">Choisir d\'abord une zone...</option>'; return; }
+    selectEl.innerHTML = '<option>Chargement...</option>';
+    fetch('{{ url('vehicules-par-zone') }}/' + zoneId)
+        .then(r => r.json())
+        .then(function(data) {
+            if(data.length === 0) { selectEl.innerHTML = '<option value="">Aucun véhicule pour cette zone</option>'; return; }
+            var opts = '<option value="">-- Sélectionner un véhicule --</option>';
+            data.forEach(function(v) {
+                var disabled = v.complet ? 'disabled' : '';
+                var badge = v.complet ? ' 🚫 COMPLET' : ' (' + v.places_dispo + ' place(s) dispo)';
+                opts += '<option value="' + v.id + '" ' + disabled + '>' + v.label + badge + '</option>';
+            });
+            selectEl.innerHTML = opts;
+        })
+        .catch(function() { selectEl.innerHTML = '<option value="">Erreur de chargement</option>'; });
+}
+function toggleModalZoneSelect() {
+    const cb = document.getElementById('modal_avec_transport');
+    const container = document.getElementById('modal_zone_transport_container');
+    if(cb && container) {
+        container.style.display = cb.checked ? 'block' : 'none';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const modalInscrireEleve = document.getElementById('modalInscrireEleve');
     if (modalInscrireEleve) {
@@ -234,9 +271,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const classeId = button.getAttribute('data-classe-id');
             const classeNom = button.getAttribute('data-classe-nom');
             const cantine = parseFloat(button.getAttribute('data-cantine')) || 0;
-            const transport = parseFloat(button.getAttribute('data-transport')) || 0;
 
             document.getElementById('modal_classe_id').value = classeId;
+            document.getElementById('modal_zone_select').value = '';
+            document.getElementById('modal_vehicule_select').innerHTML = '<option value="">Choisir d\'abord une zone...</option>';
+            document.getElementById('modal_zone_transport_container').style.display = 'none';
+            var cb = document.getElementById('modal_avec_transport');
+            if(cb) cb.checked = false;
             document.getElementById('modal_classe_nom').textContent = classeNom;
 
             const cantineBadge = document.getElementById('modal_cantine_tarif');
@@ -245,14 +286,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 cantineBadge.classList.remove('d-none');
             } else {
                 cantineBadge.classList.add('d-none');
-            }
-
-            const transportBadge = document.getElementById('modal_transport_tarif');
-            if (transport > 0) {
-                transportBadge.textContent = new Intl.NumberFormat('fr-FR').format(transport) + ' FCFA/mois';
-                transportBadge.classList.remove('d-none');
-            } else {
-                transportBadge.classList.add('d-none');
             }
         });
     }

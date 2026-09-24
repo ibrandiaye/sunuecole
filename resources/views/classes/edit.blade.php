@@ -55,39 +55,6 @@
                             <option value="0" {{ !$classe->active ? 'selected' : '' }}>Fermée (Inactive)</option>
                         </select>
                     </div>
-
-                    <div class="col-12 mt-4">
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
-                            <h6 class="fw-bold text-secondary mb-0"><i class='bx bx-money me-2'></i>Configuration Financière</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="applyNiveauTarifs()">
-                                <i class='bx bx-reset me-1'></i>Réinitialiser aux tarifs du niveau
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Inscription (FCFA)</label>
-                        <input type="number" step="0.01" name="montant_inscription" id="montant_inscription" class="form-control" value="{{ old('montant_inscription', $classe->montant_inscription) }}" placeholder="Ex: 50000">
-                        <small class="text-muted mt-1 d-block" id="hint_inscription"></small>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Mensualité (FCFA)</label>
-                        <input type="number" step="0.01" name="montant_mensualite" id="montant_mensualite" class="form-control" value="{{ old('montant_mensualite', $classe->montant_mensualite) }}" placeholder="Ex: 30000">
-                        <small class="text-muted mt-1 d-block" id="hint_mensualite"></small>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Cantine / Mois (FCFA)</label>
-                        <input type="number" step="0.01" name="montant_cantine" id="montant_cantine" class="form-control" value="{{ old('montant_cantine', $classe->montant_cantine) }}" placeholder="Facultatif">
-                        <small class="text-muted mt-1 d-block" id="hint_cantine"></small>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Montant Transport / Mois (FCFA)</label>
-                        <input type="number" step="0.01" name="montant_transport" id="montant_transport" class="form-control" value="{{ old('montant_transport', $classe->montant_transport) }}" placeholder="Facultatif">
-                        <small class="text-muted mt-1 d-block" id="hint_transport"></small>
-                    </div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-3 mt-5">
@@ -98,68 +65,4 @@
         </div>
     </div>
 </div>
-
-@php
-    $niveauxTarifs = [];
-    foreach($niveaux as $n) {
-        $tarifsMap = [];
-        foreach($n->tarifs as $t) {
-            if ($t->typePaiement) {
-                $tarifsMap[$t->typePaiement->code] = (float) $t->montant;
-            }
-        }
-        $niveauxTarifs[$n->id] = $tarifsMap;
-    }
-@endphp
-
-@section('scripts')
-<script>
-const tarifsByNiveau = @json($niveauxTarifs);
-
-function updateTarifHints() {
-    const select = document.getElementById('niveau_id_select');
-    if (!select) return;
-    const niveauId = select.value;
-    const tarifs = tarifsByNiveau[niveauId] || null;
-
-    const fields = [
-        { id: 'montant_inscription', key: 'INSCR' },
-        { id: 'montant_mensualite',  key: 'MENS' },
-        { id: 'montant_cantine',     key: 'CANT' },
-        { id: 'montant_transport',   key: 'TRANSP' }
-    ];
-
-    fields.forEach(f => {
-        const hint = document.getElementById('hint_' + f.id.replace('montant_', ''));
-        if (hint) {
-            if (tarifs && tarifs[f.key] !== undefined) {
-                hint.innerHTML = `<span class="text-muted"><i class='bx bx-info-circle me-1 text-primary'></i>Tarif standard niveau : <strong>${new Intl.NumberFormat('fr-FR').format(tarifs[f.key])} FCFA</strong></span>`;
-            } else {
-                hint.innerHTML = '';
-            }
-        }
-    });
-}
-
-function applyNiveauTarifs() {
-    const select = document.getElementById('niveau_id_select');
-    if (!select) return;
-    const niveauId = select.value;
-    const tarifs = tarifsByNiveau[niveauId] || null;
-    if (!tarifs) {
-        alert('Aucun tarif configuré pour ce niveau.');
-        return;
-    }
-
-    if (tarifs['INSCR'] !== undefined) document.getElementById('montant_inscription').value = tarifs['INSCR'];
-    if (tarifs['MENS'] !== undefined)  document.getElementById('montant_mensualite').value = tarifs['MENS'];
-    if (tarifs['CANT'] !== undefined)  document.getElementById('montant_cantine').value = tarifs['CANT'];
-    if (tarifs['TRANSP'] !== undefined) document.getElementById('montant_transport').value = tarifs['TRANSP'];
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    updateTarifHints();
-});
-</script>
-@endsection
 @endsection

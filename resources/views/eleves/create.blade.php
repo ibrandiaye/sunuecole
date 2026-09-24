@@ -77,7 +77,7 @@
                         <option value=""></option>
                         @foreach($parents as $parent)
                             <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
-                                {{ $parent->user->name ?? 'Parent #' . $parent->id }} &bull; Tél: {{ $parent->telephone ?? $parent->user->telephone ?? 'Non renseigné' }}
+                                {{ $parent->user->name ?? 'Parent #' . $parent->id }} • Tél: {{ $parent->telephone ?? $parent->user->telephone ?? 'Non renseigné' }}
                             </option>
                         @endforeach
                     </select>
@@ -143,7 +143,7 @@
                             <i class='bx bx-check-double fs-3 me-3 text-success'></i>
                             <div>
                                 <strong>Inscription directe dans : {{ $preselectedClasse->nom }}</strong>
-                                @if($preselectedClasse->niveau) &bull; <span class="badge bg-white text-success border border-success-subtle">{{ $preselectedClasse->niveau->nom }}</span> @endif
+                                @if($preselectedClasse->niveau) • <span class="badge bg-white text-success border border-success-subtle">{{ $preselectedClasse->niveau->nom }}</span> @endif
                                 <div class="small text-muted">L'élève sera automatiquement inscrit dans cette classe pour l'année scolaire en cours dès l'enregistrement.</div>
                             </div>
                         </div>
@@ -157,8 +157,7 @@
                             <option value=""></option>
                             @foreach($classes as $c)
                                 <option value="{{ $c->id }}" 
-                                    data-cantine="{{ $c->montant_cantine ?? '' }}" 
-                                    data-transport="{{ $c->montant_transport ?? '' }}" 
+                                    data-cantine="{{ $c->getEffectiveTarif('CANT') ?? '' }}" 
                                     {{ old('classe_id', $selected_classe_id) == $c->id ? 'selected' : '' }}>
                                     {{ $c->nom }} @if($c->niveau) ({{ $c->niveau->nom }}) @endif
                                 </option>
@@ -197,13 +196,27 @@
                         <div class="col-md-6">
                             <div class="p-3 border rounded-3 h-100 bg-light">
                                 <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="avec_transport" value="1" {{ old('avec_transport') ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="avec_transport" value="1" {{ old('avec_transport') ? 'checked' : '' }} onchange="toggleZoneSelect()">
                                     <label class="form-check-label fw-bold" for="avec_transport">
                                         <i class='bx bx-bus text-info me-1'></i> Transport Scolaire
                                     </label>
                                 </div>
-                                <div class="small text-muted" id="transport_tarif_text">
-                                    Abonner l'élève aux circuits de transport scolaire.
+                                <div id="zone_transport_container" style="display: {{ old('avec_transport') ? 'block' : 'none' }};">
+                                    <label class="form-label small mt-2">Choisir la Zone :</label>
+                                    <select name="zone_transport_id" id="zone_select" class="form-select form-select-sm @error('zone_transport_id') is-invalid @enderror" onchange="loadVehiculesPourZone(this.value, document.getElementById('vehicule_select'))">
+                                        <option value="">Sélectionner une zone...</option>
+                                        @foreach($zones ?? [] as $zone)
+                                            <option value="{{ $zone->id }}" {{ old('zone_transport_id') == $zone->id ? 'selected' : '' }}>{{ $zone->nom }} ({{ number_format($zone->tarif_mensuel, 0, ',', ' ') }} F)</option>
+                                        @endforeach
+                                    </select>
+                                    @error('zone_transport_id') <div class="invalid-feedback">Veuillez sélectionner une zone si le transport est coché.</div> @enderror
+                                    
+                                    <label class="form-label small mt-2">Véhicule <span class="text-danger">*</span></label>
+                                    <select name="vehicule_id" id="vehicule_select" class="form-select form-select-sm @error('vehicule_id') is-invalid @enderror">
+                                        <option value="">Choisir d'abord une zone...</option>
+                                    </select>
+                                    @error('vehicule_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    <small class="text-muted">Les places disponibles s'affichent en temps réel.</small>
                                 </div>
                             </div>
                         </div>
@@ -241,6 +254,23 @@
 </div>
 
 <script>
+function loadVehiculesPourZone(zoneId, selectEl) {
+    if(!zoneId) { selectEl.innerHTML = '<option value="">Choisir d\'abord une zone...</option>'; return; }
+    selectEl.innerHTML = '<option>Chargement...</option>';
+    fetch('{{ url('vehicules-par-zone') }}/' + zoneId)
+        .then(r => r.json())
+        .then(function(data) {
+            if(data.length === 0) { selectEl.innerHTML = '<option value="">Aucun véhicule pour cette zone</option>'; return; }
+            var opts = '<option value="">-- Sélectionner un véhicule --</option>';
+            data.forEach(function(v) {
+                var disabled = v.complet ? 'disabled' : '';
+                var badge = v.complet ? ' 🚫 COMPLET' : ' (' + v.places_dispo + ' place(s) dispo)';
+                opts += '<option value="' + v.id + '" ' + disabled + '>' + v.label + badge + '</option>';
+            });
+            selectEl.innerHTML = opts;
+        })
+        .catch(function() { selectEl.innerHTML = '<option value="">Erreur de chargement</option>'; });
+}
 function toggleTuteurMode() {
     const isExistant = document.getElementById('mode_existant').checked;
     const secExistant = document.getElementById('section_tuteur_existant');
@@ -264,7 +294,6 @@ function onClasseChange() {
     if (selectedOption && selectedOption.value) {
         optionsSection.style.display = 'block';
         const cantineTarif = selectedOption.getAttribute('data-cantine');
-        const transportTarif = selectedOption.getAttribute('data-transport');
 
         const cantineText = document.getElementById('cantine_tarif_text');
         if (cantineText) {
@@ -272,20 +301,22 @@ function onClasseChange() {
                 ? `<span class="badge bg-warning-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(cantineTarif)} FCFA / mois</span>`
                 : 'Inscrire l\'élève à la cantine scolaire.';
         }
-
-        const transportText = document.getElementById('transport_tarif_text');
-        if (transportText) {
-            transportText.innerHTML = transportTarif && parseFloat(transportTarif) > 0
-                ? `<span class="badge bg-info-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(transportTarif)} FCFA / mois</span>`
-                : 'Abonner l\'élève aux circuits de transport scolaire.';
-        }
     } else {
         optionsSection.style.display = 'none';
     }
 }
 
+function toggleZoneSelect() {
+    const cb = document.getElementById('avec_transport');
+    const container = document.getElementById('zone_transport_container');
+    if(cb && container) {
+        container.style.display = cb.checked ? 'block' : 'none';
+    }
+}
+
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', function() {
+    toggleZoneSelect();
     toggleTuteurMode();
     onClasseChange();
     $('#classe_id_select').on('select2:select select2:clear change', onClasseChange);

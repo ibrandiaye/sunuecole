@@ -28,6 +28,7 @@ Route::middleware(['auth'])->group(function () {
     
     // === Routes communes (tous les utilisateurs authentifiés) ===
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('vehicules-par-zone/{zone}', [\App\Http\Controllers\Web\VehiculeController::class, 'parZone'])->name('vehicules.par_zone');
     Route::get('profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
@@ -63,7 +64,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('notifications', [\App\Http\Controllers\Web\NotificationController::class, 'store'])->name('notifications.store');
 
         // Rapport Financier
+                Route::get('rapport-synthese', [\App\Http\Controllers\Web\RapportController::class, 'synthese'])->name('rapports.synthese');
         Route::get('rapport-financier', [\App\Http\Controllers\Web\RapportController::class, 'financier'])->name('rapports.financier');
+
+        // Trésorerie & Banque
+        Route::resource('compte_bancaires', \App\Http\Controllers\Web\CompteBancaireController::class)->except(['create', 'edit', 'destroy']);
+        Route::resource('operation_bancaires', \App\Http\Controllers\Web\OperationBancaireController::class)->only(['store', 'destroy']);
 
         // Dépenses
         Route::resource('depenses', \App\Http\Controllers\Web\DepenseController::class)->except(['show']);
@@ -79,7 +85,7 @@ Route::middleware(['auth'])->group(function () {
     // =========================================================
     // === ROUTES ADMINISTRATIVES : super_admin | directeur | administratif
     // =========================================================
-    Route::middleware(['role:super_admin|directeur|administratif'])->group(function () {
+    Route::middleware(['role:super_admin|directeur|administratif|secretaire|rh'])->group(function () {
 
         // Élèves — opérations d'écriture (create/edit/delete)
         Route::get('eleves/import-template', [\App\Http\Controllers\Web\EleveController::class, 'downloadTemplate'])->name('eleves.import_template');
@@ -108,8 +114,11 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('classes/{classe}', [ClasseController::class, 'update']);
         Route::delete('classes/{classe}', [ClasseController::class, 'destroy'])->name('classes.destroy');
 
-        // Enseignants
+                // Enseignants & Personnel & Documents (RH)
         Route::resource('enseignants', EnseignantController::class)->parameters(['enseignants' => 'enseignant']);
+        Route::resource('personnels', \App\Http\Controllers\Web\PersonnelController::class);
+        Route::post('documents', [\App\Http\Controllers\Web\DocumentController::class, 'store'])->name('documents.store');
+        Route::delete('documents/{document}', [\App\Http\Controllers\Web\DocumentController::class, 'destroy'])->name('documents.destroy');
 
         // Matières
         Route::resource('matieres', MatiereController::class)->parameters(['matieres' => 'matiere']);
@@ -122,6 +131,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Bulletins
         Route::get('bulletins', [BulletinController::class, 'index'])->name('bulletins.index');
+        Route::get('bulletins/classe/{classe}/generate', [BulletinController::class, 'generateClasse'])->name('bulletins.generate_classe');
         Route::get('bulletins/{eleve}/generate', [BulletinController::class, 'generate'])->name('bulletins.generate');
         Route::get('bulletins/verify/{token}', [BulletinController::class, 'verify'])->name('bulletins.verify');
 
@@ -141,11 +151,23 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('series', \App\Http\Controllers\Web\SerieController::class);
     });
 
+        // =========================================================
+    // === ROUTES LOGISTIQUE (Cantine & Transport) : logistique | super_admin | directeur
+    // =========================================================
+    Route::middleware(['role:super_admin|directeur|logistique'])->group(function () {
+        Route::resource('vehicules', \App\Http\Controllers\Web\VehiculeController::class);
+        
+        Route::resource('chauffeurs', \App\Http\Controllers\Web\ChauffeurController::class);
+        Route::resource('zone_transports', \App\Http\Controllers\Web\ZoneTransportController::class);
+        Route::resource('abonnement_transports', \App\Http\Controllers\Web\AbonnementTransportController::class);
+        Route::resource('abonnement_cantines', \App\Http\Controllers\Web\AbonnementCantineController::class);
+    });
+
     // =========================================================
     // === ROUTES READ-ONLY (comptable + administratif + admin) ===
     // Vue des élèves, classes, inscriptions, tuteurs — accessible aux deux rôles staff
     // =========================================================
-    Route::middleware(['role:super_admin|directeur|comptable|administratif'])->group(function () {
+    Route::middleware(['role:super_admin|directeur|comptable|administratif|secretaire|rh'])->group(function () {
         Route::get('eleves', [EleveController::class, 'index'])->name('eleves.index');
         Route::get('eleves/{eleve}', [EleveController::class, 'show'])->name('eleves.show');
         Route::get('classes', [ClasseController::class, 'index'])->name('classes.index');

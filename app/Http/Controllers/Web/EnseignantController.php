@@ -103,7 +103,7 @@ class EnseignantController extends Controller
 
     public function show(Enseignant $enseignant)
     {
-        $enseignant->load(['user', 'classes', 'matieres']);
+        $enseignant->load(['user', 'classes', 'matieres', 'documents']);
         return view('enseignants.show', compact('enseignant'));
     }
 

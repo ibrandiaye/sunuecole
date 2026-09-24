@@ -186,6 +186,172 @@ class BulletinController extends Controller
         return $pdf->download("bulletin_{$eleve->matricule}_{$periode}.pdf");
     }
 
+    /**
+     * Génère tous les bulletins des élèves d'une classe en un seul document PDF.
+     */
+    public function generateClasse(Classe $classe, Request $request)
+    {
+        ini_set('max_execution_time', 300);
+        ini_set('memory_limit', '512M');
+
+        $periode = $request->get('periode', 'Premier Semestre');
+        $classe->load(['niveau', 'matieres', 'anneeScolaire']);
+
+        $etablissement = Etablissement::first();
+        $formule = $etablissement ? $etablissement->formule_bulletin : '(M+C)/2';
+        $classeMatieres = $classe->matieres->keyBy('id');
+
+        $eleves = Eleve::where('classe_id', $classe->id)
+            ->with(['anneeScolaire', 'classe.niveau'])
+            ->orderBy('nom')
+            ->orderBy('prenom')
+            ->get();
+
+        if ($eleves->isEmpty()) {
+            return back()->with('error', 'Aucun élève trouvé dans cette classe.');
+        }
+
+        // Récupérer toutes les notes de la classe pour la période en une seule requête
+        $eleveIds = $eleves->pluck('id');
+        $allNotes = Note::whereIn('eleve_id', $eleveIds)
+            ->where('periode', $periode)
+            ->with('matiere')
+            ->get()
+            ->groupBy('eleve_id');
+
+        // 1. Calculs des moyennes par élève
+        $class_averages = [];
+        $studentCalculations = [];
+
+        foreach ($eleves as $eleve) {
+            $notes = $allNotes->get($eleve->id, collect());
+
+            $results = $notes->groupBy('matiere_id')->map(function ($items) use ($formule, $classeMatieres) {
+                $matiere_id = $items->first()->matiere_id;
+                $matiere = $items->first()->matiere;
+                $devoirs = $items->where('type_evaluation', 'devoir');
+                $composition = $items->where('type_evaluation', 'composition')->first();
+
+                $moyenne_devoirs = $devoirs->avg('valeur') ?: 0;
+                $note_composition = $composition ? $composition->valeur : $moyenne_devoirs;
+
+                if ($formule == '(M+2C)/3') {
+                    $moyenne_matiere = ($moyenne_devoirs + ($note_composition * 2)) / 3;
+                } else {
+                    $moyenne_matiere = ($moyenne_devoirs + $note_composition) / 2;
+                }
+
+                $coefficient = $classeMatieres->has($matiere_id) && $classeMatieres[$matiere_id]->pivot->coefficient_override 
+                    ? $classeMatieres[$matiere_id]->pivot->coefficient_override 
+                    : ($matiere ? $matiere->coefficient : 1);
+
+                $points = $moyenne_matiere * $coefficient;
+                $coeff_to_add = $coefficient;
+
+                if ($matiere && $matiere->type == 'optionnel') {
+                    $points = $moyenne_matiere > 10 ? ($moyenne_matiere - 10) * $coefficient : 0;
+                    $coeff_to_add = 0;
+                }
+
+                return [
+                    'matiere' => $matiere ? $matiere->nom : 'Discipline',
+                    'code' => $matiere ? $matiere->code : '',
+                    'moyenne_devoirs' => round($moyenne_devoirs, 2),
+                    'note_composition' => round($note_composition, 2),
+                    'moyenne' => round($moyenne_matiere, 2),
+                    'coefficient' => $coefficient,
+                    'coeff_to_add' => $coeff_to_add,
+                    'points' => round($points, 2),
+                    'type' => $matiere ? $matiere->type : 'obligatoire'
+                ];
+            });
+
+            $total_points = $results->sum('points');
+            $total_coefficients = $results->sum('coeff_to_add');
+            $moyenne_generale = $total_coefficients > 0 ? round($total_points / $total_coefficients, 2) : 0;
+
+            $studentCalculations[$eleve->id] = [
+                'results' => $results,
+                'moyenne_generale' => $moyenne_generale,
+            ];
+
+            if ($notes->isNotEmpty()) {
+                $class_averages[$eleve->id] = $moyenne_generale;
+            }
+        }
+
+        // 2. Classement des élèves
+        arsort($class_averages);
+        $ranks = array_keys($class_averages);
+
+        // 3. Préparer les données pour chaque bulletin et enregistrer en base
+        $bulletinsData = [];
+        $trimestreNum = ($periode == 'Premier Semestre' ? 1 : ($periode == 'Second Semestre' ? 2 : 3));
+
+        foreach ($eleves as $eleve) {
+            $calc = $studentCalculations[$eleve->id];
+            $rang = array_search($eleve->id, $ranks) !== false ? array_search($eleve->id, $ranks) + 1 : '-';
+
+            // Moyenne annuelle si applicable
+            $moyenne_annuelle = null;
+            if ($periode == 'Second Semestre' || $periode == 'Troisième Trimestre') {
+                $history = \App\Models\Bulletin::where('eleve_id', $eleve->id)
+                    ->where('annee_scolaire_id', $eleve->annee_scolaire_id)
+                    ->pluck('moyenne_generale')
+                    ->push($calc['moyenne_generale']);
+                $moyenne_annuelle = round($history->avg(), 2);
+            }
+
+            // Token & QR Code
+            $token = bin2hex(random_bytes(16));
+            $verificationUrl = route('bulletins.verify', ['token' => $token]);
+            $qrcode = base64_encode(QrCode::format('svg')->size(100)->generate($verificationUrl));
+
+            // Enregistrer ou mettre à jour dans la table bulletins
+            \App\Models\Bulletin::updateOrCreate(
+                [
+                    'eleve_id' => $eleve->id, 
+                    'trimestre' => $trimestreNum, 
+                    'annee_scolaire_id' => $eleve->annee_scolaire_id
+                ],
+                [
+                    'classe_id' => $eleve->classe_id,
+                    'moyenne_generale' => $calc['moyenne_generale'],
+                    'rang' => is_numeric($rang) ? $rang : null,
+                    'effectif_classe' => count($class_averages),
+                    'token_verification' => $token,
+                    'publie' => true,
+                    'date_publication' => now()
+                ]
+            );
+
+            $bulletinsData[] = [
+                'eleve' => $eleve,
+                'periode' => $periode,
+                'results' => $calc['results'],
+                'moyenne_generale' => $calc['moyenne_generale'],
+                'moyenne_annuelle' => $moyenne_annuelle,
+                'rang' => $rang,
+                'effectif' => count($class_averages),
+                'qrcode' => $qrcode,
+                'date' => date('d/m/Y'),
+            ];
+        }
+
+        $nomClasse = \Illuminate\Support\Str::slug($classe->nom, '_');
+        $nomPeriode = \Illuminate\Support\Str::slug($periode, '_');
+        $filename = "bulletins_{$nomClasse}_{$nomPeriode}.pdf";
+
+        $pdf = Pdf::loadView('bulletins.classe_batch', [
+            'bulletins' => $bulletinsData,
+            'classe' => $classe,
+            'periode' => $periode,
+            'etablissement' => $etablissement,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
+    }
+
     public function verify($token)
     {
         $bulletin = \App\Models\Bulletin::where('token_verification', $token)->with('eleve.classe')->firstOrFail();

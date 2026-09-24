@@ -36,43 +36,44 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
         // Création des rôles et assignation des permissions
         
         // Super Admin : a toutes les permissions
-        $role = Role::create(['name' => 'super_admin']);
+        $role = Role::firstOrCreate(['name' => 'super_admin']);
         $role->givePermissionTo(Permission::all());
 
         // Directeur
-        $directeur = Role::create(['name' => 'directeur']);
-        $directeur->givePermissionTo([
-            'eleves.view', 'eleves.create', 'eleves.edit',
-            'enseignants.view', 'enseignants.create', 'enseignants.edit',
-            'classes.view', 'classes.create', 'classes.edit',
-            'notes.view', 'bulletins.view', 'bulletins.publier',
-            'absences.view', 'paiements.stats', 'emplois.view',
-        ]);
+        $directeur = Role::firstOrCreate(['name' => 'directeur']);
+        $directeur->givePermissionTo(Permission::all()); // On donne presque tout au directeur pour l'instant
 
         // Comptable
-        $comptable = Role::create(['name' => 'comptable']);
-        $comptable->givePermissionTo(['paiements.view', 'paiements.encaisser', 'paiements.stats', 'eleves.view']);
+        $comptable = Role::firstOrCreate(['name' => 'comptable']);
+        
+        // Secrétaire
+        $secretaire = Role::firstOrCreate(['name' => 'secretaire']);
+
+        // RH (Ressources Humaines)
+        $rh = Role::firstOrCreate(['name' => 'rh']);
+
+        // Logistique (Cantine & Transport)
+        $logistique = Role::firstOrCreate(['name' => 'logistique']);
+
+        // Administratif (Générique)
+        $administratif = Role::firstOrCreate(['name' => 'administratif']);
 
         // Surveillant
-        $surveillant = Role::create(['name' => 'surveillant']);
-        $surveillant->givePermissionTo(['absences.view', 'absences.marquer', 'absences.justifier', 'eleves.view', 'emplois.view']);
+        $surveillant = Role::firstOrCreate(['name' => 'surveillant']);
 
         // Enseignant
-        $enseignant = Role::create(['name' => 'enseignant']);
-        $enseignant->givePermissionTo(['notes.view', 'notes.saisir', 'absences.marquer', 'emplois.view', 'eleves.view']);
+        $enseignant = Role::firstOrCreate(['name' => 'enseignant']);
 
         // Parent
-        $parent = Role::create(['name' => 'parent']);
-        $parent->givePermissionTo(['notes.view', 'absences.view', 'bulletins.view', 'paiements.view', 'emplois.view']);
+        $parent = Role::firstOrCreate(['name' => 'parent']);
 
         // Élève
-        $eleve = Role::create(['name' => 'eleve']);
-        $eleve->givePermissionTo(['notes.view', 'absences.view', 'bulletins.view', 'emplois.view']);
+        $eleve = Role::firstOrCreate(['name' => 'eleve']);
     }
 }

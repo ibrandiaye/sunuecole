@@ -55,7 +55,10 @@ Route::middleware(['auth:api'])->group(function () {
     Route::post('enseignant/evaluations/{id}/notes', [EnseignantApiController::class, 'storeNotesBatch']);
     Route::post('enseignant/absences/batch', [EnseignantApiController::class, 'storeAbsencesBatch']);
     Route::put('enseignant/profil', [EnseignantApiController::class, 'updateProfil']);
+    Route::put('profil/password', [AuthController::class, 'updatePassword']);
+
     // Notifications
     Route::post('notifications/token', [NotificationApiController::class, 'updateToken']);
     Route::get('notifications', [NotificationApiController::class, 'getNotifications']);
+    Route::post('notifications/{id}/read', [NotificationApiController::class, 'markAsRead']);
 });

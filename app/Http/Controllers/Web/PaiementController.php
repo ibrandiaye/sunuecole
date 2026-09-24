@@ -57,6 +57,22 @@ class PaiementController extends Controller
         $annee = AnneeScolaire::where('active', true)->first();
         $baseData = $request->validated();
         
+        // Vérifier si un paiement existe déjà pour cet élève, ce type et ce mois
+        $query = \App\Models\Paiement::where('eleve_id', $baseData['eleve_id'])
+            ->where('type_paiement_id', $baseData['type_paiement_id'])
+            ->where('annee_scolaire_id', $annee ? $annee->id : null);
+            
+        if (!empty($baseData['mois'])) {
+            $query->where('mois', $baseData['mois']);
+        } else {
+            $query->whereNull('mois');
+        }
+        
+        $existing = $query->first();
+        if ($existing) {
+            return back()->with('error', 'Attention : Un paiement a déjà été enregistré pour cet élève pour cette rubrique et ce mois.');
+        }
+
         // Recalculer le montant dû selon les tarifs et remises
         $eleve = Eleve::with('inscriptionActuelle', 'classe.niveau')->find($baseData['eleve_id']);
         $type = TypePaiement::find($baseData['type_paiement_id']);
@@ -259,33 +275,25 @@ class PaiementController extends Controller
             $code = $type->code;
             $classe = $eleve->classe;
             
-            // Montants effectifs des services optionnels (Classe > Niveau > 0)
+            // Montant effectif cantine (défini au niveau académique)
             $montantCantine = $classe->getEffectiveTarif('CANT') ?? 0;
-            $montantTransport = $classe->getEffectiveTarif('TRANSP') ?? 0;
-
-            // Calcul des options supplémentaires
-            $optionsAmount = 0;
-            if ($eleve->inscriptionActuelle) {
-                if ($eleve->inscriptionActuelle->avec_cantine) {
-                    $optionsAmount += $montantCantine;
-                }
-                if ($eleve->inscriptionActuelle->avec_transport) {
-                    $optionsAmount += $montantTransport;
-                }
-            }
 
             if ($code === 'INSCR') {
                 $tarifBase = $classe->getEffectiveTarif('INSCR') ?? $tarifBase;
             } elseif ($code === 'MENS') {
                 $tarifBase = $classe->getEffectiveTarif('MENS') ?? $tarifBase;
             } elseif ($code === 'CANT') {
-                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_cantine) 
-                    ? $montantCantine 
-                    : 0;
+                // Vérifier si l'élève a un abonnement cantine actif
+                $abonnementCantine = \App\Models\AbonnementCantine::where('eleve_id', $eleve->id)
+                    ->where('actif', true)
+                    ->first();
+                $tarifBase = $abonnementCantine ? ($montantCantine > 0 ? $montantCantine : $type->montant_defaut) : 0;
             } elseif ($code === 'TRANSP') {
-                $tarifBase = ($eleve->inscriptionActuelle && $eleve->inscriptionActuelle->avec_transport) 
-                    ? $montantTransport 
-                    : 0;
+                $abonnement = \App\Models\AbonnementTransport::where('eleve_id', $eleve->id)
+                    ->where('actif', true)
+                    ->with('zoneTransport')
+                    ->first();
+                $tarifBase = $abonnement && $abonnement->zoneTransport ? $abonnement->zoneTransport->tarif_mensuel : 0;
             } else {
                 if ($classe->niveau && $annee) {
                     $tarifConfig = \App\Models\Tarif::where('annee_scolaire_id', $annee->id)

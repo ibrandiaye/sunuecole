@@ -31,7 +31,7 @@
         <div class="flex-grow-1">
             <h5>Saisie : {{ $evaluation->titre }}</h5>
             <small class="opacity-75">
-                {{ $classe->nom }} &bull; {{ $matiere->nom }} &bull; Coef. {{ number_format($coefficient, 0) }}
+                {{ $classe->nom }} • {{ $matiere->nom }} • Coef. {{ number_format($coefficient, 0) }}
             </small>
         </div>
     </div>

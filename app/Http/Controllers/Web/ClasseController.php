@@ -32,19 +32,17 @@ class ClasseController extends Controller
                 ->get();
         }
 
-        return view('classes.index', compact('classes', 'anneeActive', 'elevesNonInscrits'));
+        $zones = \App\Models\ZoneTransport::all();
+
+        return view('classes.index', compact('classes', 'anneeActive', 'elevesNonInscrits', 'zones'));
     }
 
     public function create()
     {
-        $activeYear = AnneeScolaire::where('active', true)->first();
-        $niveaux = Niveau::with(['cycle', 'tarifs' => function($q) use ($activeYear) {
-            $q->where('annee_scolaire_id', $activeYear ? $activeYear->id : 0)->with('typePaiement');
-        }])->orderBy('ordre')->get();
-
+        $niveaux = Niveau::with('cycle')->orderBy('ordre')->get();
         $series = Serie::all();
         $salles = Salle::where('disponible', true)->get();
-        return view('classes.create', compact('niveaux', 'series', 'salles', 'activeYear'));
+        return view('classes.create', compact('niveaux', 'series', 'salles'));
     }
 
     public function store(StoreClasseRequest $request)
@@ -83,14 +81,10 @@ class ClasseController extends Controller
 
     public function edit(Classe $classe)
     {
-        $activeYear = AnneeScolaire::where('active', true)->first();
-        $niveaux = Niveau::with(['cycle', 'tarifs' => function($q) use ($activeYear) {
-            $q->where('annee_scolaire_id', $activeYear ? $activeYear->id : 0)->with('typePaiement');
-        }])->orderBy('ordre')->get();
-
+        $niveaux = Niveau::with('cycle')->orderBy('ordre')->get();
         $series = Serie::all();
         $salles = Salle::all();
-        return view('classes.edit', compact('classe', 'niveaux', 'series', 'salles', 'activeYear'));
+        return view('classes.edit', compact('classe', 'niveaux', 'series', 'salles'));
     }
 
     public function update(Request $request, Classe $classe)
@@ -102,10 +96,6 @@ class ClasseController extends Controller
             'salle_id' => 'nullable|exists:salles,id',
             'effectif_max' => 'required|integer|min:1',
             'active' => 'required|boolean',
-            'montant_inscription' => 'nullable|numeric|min:0',
-            'montant_mensualite' => 'nullable|numeric|min:0',
-            'montant_cantine' => 'nullable|numeric|min:0',
-            'montant_transport' => 'nullable|numeric|min:0',
         ]);
 
         $classe->update($data);

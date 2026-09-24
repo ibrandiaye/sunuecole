@@ -36,4 +36,9 @@ class Enseignant extends Model
     {
         return $this->hasMany(ClasseMatiere::class);
     }
+
+    public function documents()
+    {
+        return $this->morphMany(Document::class, 'documentable');
+    }
 }

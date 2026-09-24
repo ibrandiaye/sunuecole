@@ -24,7 +24,7 @@
                             <option value=""></option>
                             @foreach($eleves as $eleve)
                                 <option value="{{ $eleve->id }}" {{ (old('eleve_id', $selected_eleve ?? '') == $eleve->id) ? 'selected' : '' }}>
-                                    {{ $eleve->nom }} {{ $eleve->prenom }} &bull; Matricule: {{ $eleve->matricule }}
+                                    {{ $eleve->nom }} {{ $eleve->prenom }} • Matricule: {{ $eleve->matricule }}
                                 </option>
                             @endforeach
                         @endif
@@ -55,7 +55,6 @@
                             @foreach($classes as $classe)
                                 <option value="{{ $classe->id }}" 
                                     data-cantine="{{ $classe->getEffectiveTarif('CANT') ?? '' }}"
-                                    data-transport="{{ $classe->getEffectiveTarif('TRANSP') ?? '' }}"
                                     {{ (old('classe_id', $selected_classe_id ?? '') == $classe->id) ? 'selected' : '' }}>
                                     {{ $classe->nom }} @if($classe->niveau) ({{ $classe->niveau->nom }}) @endif
                                 </option>
@@ -90,12 +89,28 @@
                         <div class="col-md-6">
                             <div class="p-3 bg-white rounded-3 border h-100">
                                 <div class="form-check form-switch mb-2">
-                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="avec_transport" value="1" {{ old('avec_transport') ? 'checked' : '' }}>
+                                    <input class="form-check-input" type="checkbox" role="switch" name="avec_transport" id="avec_transport" value="1" {{ old('avec_transport') ? 'checked' : '' }} onchange="toggleZoneSelect()">
                                     <label class="form-check-label fw-bold" for="avec_transport">
                                         <i class='bx bx-bus text-info me-1'></i> Transport Scolaire
                                     </label>
                                 </div>
-                                <div class="small text-muted" id="transport_tarif_info">
+                                <div id="zone_transport_container" style="display: {{ old('avec_transport') ? 'block' : 'none' }};">
+                                    <label class="form-label small mt-2">Choisir la Zone :</label>
+                                    <select name="zone_transport_id" id="zone_select" class="form-select form-select-sm @error('zone_transport_id') is-invalid @enderror" onchange="loadVehiculesPourZone(this.value, document.getElementById('vehicule_select'))">
+                                        <option value="">Sélectionner une zone...</option>
+                                        @foreach($zones ?? [] as $zone)
+                                            <option value="{{ $zone->id }}" {{ old('zone_transport_id') == $zone->id ? 'selected' : '' }}>{{ $zone->nom }} ({{ number_format($zone->tarif_mensuel, 0, ',', ' ') }} F)</option>
+                                        @endforeach
+                                    </select>
+                                    @error('zone_transport_id') <div class="invalid-feedback">Veuillez sélectionner une zone si le transport est coché.</div> @enderror
+
+                                    <label class="form-label small mt-2">Véhicule <span class="text-danger">*</span></label>
+                                    <select name="vehicule_id" id="vehicule_select" class="form-select form-select-sm">
+                                        <option value="">Choisir d'abord une zone...</option>
+                                    </select>
+                                    <small class="text-muted">Les places disponibles s'affichent en temps réel.</small>
+                                </div>
+                                <div class="small text-muted mt-2" id="transport_tarif_info">
                                     Abonnement aux circuits de transport scolaire.
                                 </div>
                             </div>
@@ -129,6 +144,30 @@
         </div>
 
         <script>
+        function toggleZoneSelect() {
+            var cb = document.getElementById('avec_transport');
+            var container = document.getElementById('zone_transport_container');
+            if(cb && container) { container.style.display = cb.checked ? 'block' : 'none'; }
+        }
+
+                function loadVehiculesPourZone(zoneId, selectEl, selectedVehiculeId = null) {
+            if(!zoneId) { selectEl.innerHTML = '<option value="">Choisir d\'abord une zone...</option>'; return; }
+            selectEl.innerHTML = '<option>Chargement...</option>';
+            fetch('{{ url('vehicules-par-zone') }}/' + zoneId)
+                .then(r => r.json())
+                .then(function(data) {
+                    if(data.length === 0) { selectEl.innerHTML = '<option value="">Aucun véhicule pour cette zone</option>'; return; }
+                    var opts = '<option value="">-- Sélectionner un véhicule --</option>';
+                    data.forEach(function(v) {
+                        var isSelected = (selectedVehiculeId && selectedVehiculeId == v.id) ? 'selected' : '';
+                        var disabled = (v.complet && !isSelected) ? 'disabled' : '';
+                        var badge = v.complet ? ' 🚫 COMPLET' : ' (' + v.places_dispo + ' place(s) dispo)';
+                        opts += '<option value="' + v.id + '" ' + disabled + ' ' + isSelected + '>' + v.label + badge + '</option>';
+                    });
+                    selectEl.innerHTML = opts;
+                })
+                .catch(function() { selectEl.innerHTML = '<option value="">Erreur de chargement</option>'; });
+        }
         function updateTarifsDisplay() {
             const select = document.getElementById('classe_id_select');
             if (!select) return;
@@ -136,7 +175,6 @@
             if (!opt || !opt.value) return;
 
             const cantine = opt.getAttribute('data-cantine');
-            const transport = opt.getAttribute('data-transport');
 
             const cantineInfo = document.getElementById('cantine_tarif_info');
             if (cantineInfo) {
@@ -144,16 +182,16 @@
                     ? `<span class="badge bg-warning-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(cantine)} FCFA / mois</span>`
                     : 'Prise en charge de la demi-pension / cantine.';
             }
-
-            const transportInfo = document.getElementById('transport_tarif_info');
-            if (transportInfo) {
-                transportInfo.innerHTML = transport && parseFloat(transport) > 0
-                    ? `<span class="badge bg-info-subtle text-dark border"><i class='bx bx-coin-stack me-1'></i>${new Intl.NumberFormat('fr-FR').format(transport)} FCFA / mois</span>`
-                    : 'Abonnement aux circuits de transport scolaire.';
-            }
         }
-        document.addEventListener('DOMContentLoaded', function() {
+                document.addEventListener('DOMContentLoaded', function() {
+            var zoneSelect = document.getElementById('zone_select');
+            var vehiculeSelect = document.getElementById('vehicule_select');
+            if(zoneSelect && zoneSelect.value && vehiculeSelect) {
+                var oldVehicule = "{{ old('vehicule_id') }}";
+                loadVehiculesPourZone(zoneSelect.value, vehiculeSelect, oldVehicule);
+            }
             updateTarifsDisplay();
+            toggleZoneSelect();
             $('#classe_id_select').on('select2:select select2:clear change', updateTarifsDisplay);
         });
         </script>

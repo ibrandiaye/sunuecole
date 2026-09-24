@@ -117,6 +117,26 @@ class EleveService
                     'avec_cantine' => !empty($data['avec_cantine']),
                     'avec_transport' => !empty($data['avec_transport']),
                 ]);
+
+                // Gestion Cantine
+                if (!empty($data['avec_cantine'])) {
+                    \App\Models\AbonnementCantine::create([
+                        'eleve_id' => $eleve->id,
+                        'date_debut' => now(),
+                        'actif' => true,
+                    ]);
+                }
+                
+                // Gestion Transport
+                if (!empty($data['avec_transport']) && !empty($data['zone_transport_id'])) {
+                    \App\Models\AbonnementTransport::create([
+                        'eleve_id' => $eleve->id,
+                        'zone_transport_id' => $data['zone_transport_id'],
+                        'vehicule_id' => $data['vehicule_id'] ?? null,
+                        'date_debut' => now(),
+                        'actif' => true,
+                    ]);
+                }
             }
 
             return $eleve;

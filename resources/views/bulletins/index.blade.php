@@ -33,7 +33,17 @@
     @if($selected_classe_id)
     <div class="col-md-12">
         <div class="card p-4 border-0 shadow-sm">
-            <h5 class="fw-bold mb-4">Élèves de la classe : <span class="text-primary">{{ $classes->find($selected_classe_id)->nom }}</span></h5>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h5 class="fw-bold mb-1">Élèves de la classe : <span class="text-primary">{{ $classes->find($selected_classe_id)->nom }}</span></h5>
+                    <p class="text-muted small mb-0"><i class='bx bx-calendar me-1'></i> Période active : <strong>{{ $periode }}</strong> ({{ count($eleves) }} élève(s))</p>
+                </div>
+                @if(count($eleves) > 0)
+                    <a href="{{ route('bulletins.generate_classe', ['classe' => $selected_classe_id, 'periode' => $periode]) }}" class="btn btn-success shadow-sm rounded-pill px-4 fw-bold">
+                        <i class='bx bxs-file-pdf me-2'></i> Générer tous les bulletins (1-Clic)
+                    </a>
+                @endif
+            </div>
             
             <div class="table-responsive">
                 <table class="table table-hover align-middle">

@@ -204,4 +204,32 @@ class AuthController extends Controller
             'user' => Auth::guard('api')->user()
         ]);
     }
+
+    /**
+     * Mettre à jour le mot de passe de l'utilisateur.
+     */
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6|confirmed'
+        ]);
+
+        $user = Auth::guard('api')->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Le mot de passe actuel est incorrect.'
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Mot de passe mis à jour avec succès.'
+        ]);
+    }
 }

@@ -33,6 +33,7 @@ class EleveController extends Controller
 
         $eleves = $query->paginate(15)->appends($request->all());
         $selected_classe_id = $request->get('classe_id');
+        $zones = \App\Models\ZoneTransport::all();
 
         return view('eleves.index', compact('eleves', 'selected_classe_id'));
     }
@@ -42,7 +43,8 @@ class EleveController extends Controller
         $parents = \App\Models\ParentEleve::with('user')->get();
         $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
         $selected_classe_id = $request->get('classe_id');
-        return view('eleves.create', compact('parents', 'classes', 'selected_classe_id'));
+        $zones = \App\Models\ZoneTransport::all();
+        return view('eleves.create', compact('parents', 'classes', 'selected_classe_id', 'zones'));
     }
 
     public function store(StoreEleveRequest $request)
@@ -83,7 +85,10 @@ class EleveController extends Controller
         $eleve->load('inscriptionActuelle');
         $classes = Classe::visible()->where('active', true)->with('niveau')->orderBy('nom')->get();
         $parents = \App\Models\ParentEleve::with('user')->get();
-        return view('eleves.edit', compact('eleve', 'classes', 'parents'));
+        $zones = \App\Models\ZoneTransport::all();
+        $abonnementCantine = \App\Models\AbonnementCantine::where('eleve_id', $eleve->id)->where('actif', true)->first();
+        $abonnementTransport = \App\Models\AbonnementTransport::where('eleve_id', $eleve->id)->where('actif', true)->first();
+        return view('eleves.edit', compact('eleve', 'classes', 'parents', 'zones', 'abonnementCantine', 'abonnementTransport'));
     }
 
     public function update(UpdateEleveRequest $request, Eleve $eleve)
@@ -126,6 +131,38 @@ class EleveController extends Controller
                     'date_inscription' => now(),
                 ]
             );
+
+            // Gestion Cantine
+            if ($data['avec_cantine']) {
+                \App\Models\AbonnementCantine::firstOrCreate([
+                    'eleve_id' => $eleve->id,
+                    'date_debut' => now(),
+                    'actif' => true,
+                ]);
+            } else {
+                \App\Models\AbonnementCantine::where('eleve_id', $eleve->id)->update(['actif' => false]);
+            }
+            
+            // Gestion Transport
+            if ($data['avec_transport'] && $request->has('zone_transport_id')) {
+                $abT = \App\Models\AbonnementTransport::where('eleve_id', $eleve->id)->where('actif', true)->first();
+                if (!$abT) {
+                    \App\Models\AbonnementTransport::create([
+                        'eleve_id' => $eleve->id,
+                        'zone_transport_id' => $request->zone_transport_id,
+                        'vehicule_id' => $request->vehicule_id,
+                        'date_debut' => now(),
+                        'actif' => true,
+                    ]);
+                } elseif ($abT->zone_transport_id != $request->zone_transport_id || $abT->vehicule_id != $request->vehicule_id) {
+                    $abT->update([
+                        'zone_transport_id' => $request->zone_transport_id,
+                        'vehicule_id' => $request->vehicule_id
+                    ]);
+                }
+            } else {
+                \App\Models\AbonnementTransport::where('eleve_id', $eleve->id)->update(['actif' => false]);
+            }
         }
 
         return redirect()->route('eleves.index')

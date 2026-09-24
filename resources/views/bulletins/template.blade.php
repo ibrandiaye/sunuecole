@@ -1,4 +1,4 @@
-﻿@php
+@php
     $nb = count($results);
     if ($nb <= 9) {
         $baseFontSize   = '9pt';
@@ -297,7 +297,7 @@
             </tr>
             <tr class="row-rang">
                 <td colspan="4" style="text-align:right; padding-right:4px;">RANG :</td>
-                <td colspan="3" style="text-align:center;"><strong>{{ $rang }}<sup>{{ $rang == 1 ? 'er' : '&egrave;me' }}</sup> sur {{ $effectif }}</strong></td>
+                <td colspan="3" style="text-align:center;"><strong>{{ $rang }}<sup>{{ $rang == 1 ? 'er' : 'ème' }}</sup> sur {{ $effectif }}</strong></td>
             </tr>
             @if($moyenne_annuelle)
             <tr class="row-annuel">

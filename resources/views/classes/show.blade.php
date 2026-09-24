@@ -28,6 +28,17 @@
                             <li><a class="dropdown-item" href="{{ route('inscriptions.create', ['classe_id' => $classe->id]) }}"><i class='bx bx-user-check me-2 text-primary'></i>Élève déjà enregistré</a></li>
                         </ul>
                     </div>
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class='bx bxs-file-pdf me-1'></i>Bulletins
+                        </button>
+                        <ul class="dropdown-menu shadow-sm border-0">
+                            <li><a class="dropdown-item" href="{{ route('bulletins.generate_classe', ['classe' => $classe->id, 'periode' => 'Premier Semestre']) }}"><i class='bx bxs-file-pdf me-2 text-danger'></i>Tous les bulletins (1er Semestre)</a></li>
+                            <li><a class="dropdown-item" href="{{ route('bulletins.generate_classe', ['classe' => $classe->id, 'periode' => 'Second Semestre']) }}"><i class='bx bxs-file-pdf me-2 text-danger'></i>Tous les bulletins (2nd Semestre)</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('bulletins.index', ['classe_id' => $classe->id]) }}"><i class='bx bx-list-ul me-2 text-primary'></i>Tableau des bulletins</a></li>
+                        </ul>
+                    </div>
                     <a href="{{ route('classes.edit', $classe) }}" class="btn btn-primary"><i class='bx bx-edit me-1'></i>Modifier</a>
                 </div>
             </div>
