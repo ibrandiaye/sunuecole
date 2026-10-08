@@ -14,8 +14,9 @@
     <!-- Boxicons for icons -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     
-    <!-- DataTables Bootstrap 5 CSS & Buttons -->
+    <!-- DataTables Bootstrap 5 CSS, Responsive & Buttons -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" rel="stylesheet">
 
     <!-- Select2 CSS & Bootstrap 5 Theme -->
@@ -73,17 +74,26 @@
             background-color: var(--bg-color);
             color: #2b2d42;
             overflow-x: hidden;
+            min-height: 100vh;
+            width: 100%;
+            position: relative;
+        }
+
+        body.sidebar-open {
+            overflow: hidden !important;
         }
 
         .sidebar {
             width: var(--sidebar-width);
             height: 100vh;
             position: fixed;
+            top: 0;
+            left: 0;
             background: #ffffff;
             border-right: 1px solid rgba(0,0,0,0.05);
             padding: 20px;
-            transition: all 0.3s ease;
-            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1050;
             overflow-y: auto;
         }
 
@@ -282,7 +292,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            gap: 12px;
+        }
+
+        .page-title-responsive {
+            font-size: 1.35rem;
         }
 
         .user-profile {
@@ -296,16 +311,205 @@
         }
 
         .user-avatar {
-            width: 35px;
-            height: 35px;
+            width: 36px;
+            height: 36px;
             border-radius: 10px;
             background: #e9ecef;
+            flex-shrink: 0;
         }
         
         .nav-pills {
             --bs-nav-pills-link-active-color: #0d6efd !important;
-        }   
-  
+        }
+
+        /* Responsive Breakpoints & Adaptations */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                left: -300px;
+                width: 280px;
+                max-width: 85vw;
+            }
+            .sidebar.show {
+                left: 0;
+                box-shadow: 0 0 40px rgba(0,0,0,0.3);
+            }
+            .main-content {
+                margin-left: 0 !important;
+                padding: 16px;
+                width: 100%;
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
+            .sidebar-backdrop {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(15, 23, 42, 0.45);
+                backdrop-filter: blur(2px);
+                z-index: 1045;
+                display: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+            .sidebar-backdrop.show {
+                display: block;
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .top-navbar {
+                margin-bottom: 18px;
+            }
+            .page-title-responsive {
+                font-size: 1.1rem !important;
+                max-width: calc(100vw - 140px);
+            }
+            .user-profile {
+                padding: 6px 8px;
+            }
+
+            /* Responsive swipeable nav tabs and pills */
+            .nav-pills, .nav-tabs {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 6px;
+            }
+            .nav-pills .nav-item, .nav-tabs .nav-item {
+                flex-shrink: 0;
+            }
+            .nav-pills .nav-link, .nav-tabs .nav-link {
+                white-space: nowrap !important;
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .main-content {
+                padding: 12px;
+            }
+            .card {
+                border-radius: 14px !important;
+            }
+            .card.p-4 {
+                padding: 1rem !important;
+            }
+            .card.p-5 {
+                padding: 1.25rem !important;
+            }
+
+            /* Actions in card headers auto-stack gracefully on mobile */
+            .card-header-actions,
+            .card > .d-flex.justify-content-between.align-items-center:first-child,
+            .card > .d-flex.justify-content-between.mb-4,
+            .card > .d-flex.justify-content-between.mb-3 {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 12px !important;
+            }
+            .card > .d-flex.justify-content-between.align-items-center:first-child > div:last-child,
+            .card > .d-flex.justify-content-between.mb-4 > div:last-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                width: 100%;
+            }
+            .card > .d-flex.justify-content-between.align-items-center:first-child > div:last-child > .btn,
+            .card > .d-flex.justify-content-between.mb-4 > div:last-child > .btn,
+            .card > .d-flex.justify-content-between.mb-4 > a.btn,
+            .card > .d-flex.justify-content-between.mb-3 > a.btn {
+                flex: 1 1 auto;
+                text-align: center;
+                justify-content: center;
+            }
+
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+            .modal-content {
+                border-radius: 16px;
+            }
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .card:hover {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* Responsive Tables & DataTables Controls */
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        .dataTables_wrapper {
+            width: 100%;
+            max-width: 100%;
+        }
+        .dataTables_wrapper .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        @media (max-width: 767.98px) {
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_filter {
+                text-align: center !important;
+                width: 100%;
+                margin-bottom: 8px;
+            }
+            .dataTables_wrapper .dataTables_filter label {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+            .dataTables_wrapper .dataTables_filter input {
+                flex: 1;
+                max-width: 220px;
+            }
+            .dataTables_wrapper .dt-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 4px;
+                margin-bottom: 10px;
+            }
+            .dataTables_wrapper .dataTables_paginate {
+                display: flex !important;
+                justify-content: center !important;
+                width: 100%;
+                margin-top: 10px;
+                overflow-x: auto;
+            }
+            .dataTables_wrapper .dataTables_paginate .pagination {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 2px;
+            }
+            .dataTables_wrapper .dataTables_info {
+                text-align: center !important;
+                margin-bottom: 6px;
+                font-size: 0.82rem;
+            }
+        }
+
+        /* Select2 Responsive Safety */
+        .select2-container {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        .select2-dropdown {
+            max-width: 90vw !important;
+        }
     </style>
     @yield('styles')
 </head>
@@ -313,13 +517,19 @@
 
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="brand">
-            <div class="brand-logo"><i class='bx bxs-graduation'></i></div>
-            <span class="brand-name">SunuEcole</span>
+        <div class="brand d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <div class="brand-logo"><i class='bx bxs-graduation'></i></div>
+                <span class="brand-name">SunuEcole</span>
+            </div>
+            <button class="btn btn-sm btn-light border-0 d-lg-none rounded-circle text-muted" id="sidebarClose" type="button" title="Fermer le menu" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                <i class='bx bx-x fs-4'></i>
+            </button>
         </div>
 
         <nav class="nav flex-column" id="sidebarMenu">
-            {{-- Dashboard principal --}}
+            {{-- MENU ADMINISTRATION & STAFF --}}
+            @hasanyrole(['super_admin', 'directeur', 'administratif', 'secretaire', 'comptable', 'logistique', 'rh', 'surveillant'])
             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <i class='bx bxs-dashboard'></i> <span>Dashboard</span>
             </a>
@@ -613,19 +823,100 @@
                     </div>
                 </div>
             @endhasanyrole
+            @endhasanyrole
+
+            {{-- MENU ENSEIGNANT --}}
+            @hasrole('enseignant')
+                <a href="{{ route('professeur.dashboard') }}" class="nav-link {{ request()->routeIs('professeur.dashboard') ? 'active' : '' }}">
+                    <i class='bx bxs-dashboard text-primary'></i> <span>Tableau de bord</span>
+                </a>
+                <a href="{{ route('professeur.classes') }}" class="nav-link {{ request()->routeIs('professeur.classes*') ? 'active' : '' }}">
+                    <i class='bx bxs-group text-info'></i> <span>Mes Classes & Élèves</span>
+                </a>
+                <a href="{{ route('professeur.planning') }}" class="nav-link {{ request()->routeIs('professeur.planning') ? 'active' : '' }}">
+                    <i class='bx bxs-calendar text-success'></i> <span>Emploi du temps</span>
+                </a>
+                <a href="{{ route('professeur.notes.index') }}" class="nav-link {{ request()->routeIs('professeur.notes.*') ? 'active' : '' }}">
+                    <i class='bx bxs-edit text-warning'></i> <span>Saisie des Notes</span>
+                </a>
+                <a href="{{ route('professeur.absences.index') }}" class="nav-link {{ request()->routeIs('professeur.absences.index') || request()->routeIs('professeur.absences.appel') ? 'active' : '' }}">
+                    <i class='bx bxs-user-check text-danger'></i> <span>Faire l'Appel</span>
+                </a>
+                <a href="{{ route('professeur.absences.historique') }}" class="nav-link {{ request()->routeIs('professeur.absences.historique') ? 'active' : '' }}">
+                    <i class='bx bx-history text-secondary'></i> <span>Historique Présences</span>
+                </a>
+                <a href="{{ route('professeur.cahier_textes') }}" class="nav-link {{ request()->routeIs('professeur.cahier_textes*') ? 'active' : '' }}">
+                    <i class='bx bxs-book-content text-primary'></i> <span>Cahier de Textes</span>
+                </a>
+            @endhasrole
+
+            {{-- MENU PARENT --}}
+            @hasrole('parent')
+                <a href="{{ route('parent.dashboard') }}" class="nav-link {{ request()->routeIs('parent.dashboard') ? 'active' : '' }}">
+                    <i class='bx bxs-dashboard text-primary'></i> <span>Tableau de bord</span>
+                </a>
+                <a href="{{ route('parent.enfants') }}" class="nav-link {{ request()->routeIs('parent.enfants') ? 'active' : '' }}">
+                    <i class='bx bxs-user-detail text-info'></i> <span>Mes Enfants</span>
+                </a>
+                <a href="{{ route('parent.notes') }}" class="nav-link {{ request()->routeIs('parent.notes') ? 'active' : '' }}">
+                    <i class='bx bxs-award text-warning'></i> <span>Notes & Bulletins</span>
+                </a>
+                <a href="{{ route('parent.planning') }}" class="nav-link {{ request()->routeIs('parent.planning') ? 'active' : '' }}">
+                    <i class='bx bxs-calendar text-success'></i> <span>Emploi du temps</span>
+                </a>
+                <a href="{{ route('parent.absences') }}" class="nav-link {{ request()->routeIs('parent.absences') ? 'active' : '' }}">
+                    <i class='bx bxs-time-five text-danger'></i> <span>Absences & Retards</span>
+                </a>
+                <a href="{{ route('parent.convocations') }}" class="nav-link {{ request()->routeIs('parent.convocations') ? 'active' : '' }}">
+                    <i class='bx bxs-envelope text-secondary'></i> <span>Convocations</span>
+                </a>
+                <a href="{{ route('parent.paiements') }}" class="nav-link {{ request()->routeIs('parent.paiements') ? 'active' : '' }}">
+                    <i class='bx bxs-credit-card text-success'></i> <span>Scolarité & Frais</span>
+                </a>
+            @endhasrole
+
+            {{-- MENU ÉLÈVE --}}
+            @hasrole('eleve')
+                <a href="{{ route('eleve.dashboard') }}" class="nav-link {{ request()->routeIs('eleve.dashboard') ? 'active' : '' }}">
+                    <i class='bx bxs-dashboard text-primary'></i> <span>Mon Espace</span>
+                </a>
+                <a href="{{ route('eleve.planning') }}" class="nav-link {{ request()->routeIs('eleve.planning') ? 'active' : '' }}">
+                    <i class='bx bxs-calendar text-success'></i> <span>Mon Emploi du temps</span>
+                </a>
+                <a href="{{ route('eleve.notes') }}" class="nav-link {{ request()->routeIs('eleve.notes') ? 'active' : '' }}">
+                    <i class='bx bxs-award text-warning'></i> <span>Mes Notes & Moyennes</span>
+                </a>
+                <a href="{{ route('eleve.absences') }}" class="nav-link {{ request()->routeIs('eleve.absences') ? 'active' : '' }}">
+                    <i class='bx bxs-time-five text-danger'></i> <span>Mes Absences</span>
+                </a>
+                <a href="{{ route('eleve.convocations') }}" class="nav-link {{ request()->routeIs('eleve.convocations') ? 'active' : '' }}">
+                    <i class='bx bxs-envelope text-secondary'></i> <span>Mes Convocations</span>
+                </a>
+                <a href="{{ route('eleve.paiements') }}" class="nav-link {{ request()->routeIs('eleve.paiements') ? 'active' : '' }}">
+                    <i class='bx bxs-credit-card text-success'></i> <span>Ma Scolarité</span>
+                </a>
+            @endhasrole
         </nav>
     </div>
+
+    <!-- Backdrop for mobile drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <!-- Main Content -->
     <div class="main-content">
         <div class="top-navbar">
-            <h4 class="fw-bold">@yield('page_title')</h4>
-            <div class="user-profile dropdown" style="cursor: pointer;" data-bs-toggle="dropdown">
-                <div class="text-end me-2">
-                    <p class="mb-0 fw-bold">{{ auth()->user()->name ?? 'Invité' }}</p>
+            <div class="d-flex align-items-center min-w-0 me-2">
+                <button class="btn btn-light bg-white border d-lg-none me-2 shadow-sm rounded-3 p-2 d-inline-flex align-items-center justify-content-center" id="sidebarToggle" type="button" title="Menu" style="width: 38px; height: 38px;">
+                    <i class='bx bx-menu fs-4'></i>
+                </button>
+                <h4 class="fw-bold mb-0 page-title-responsive text-truncate">@yield('page_title')</h4>
+            </div>
+            <div class="user-profile dropdown flex-shrink-0" style="cursor: pointer;" data-bs-toggle="dropdown">
+                <div class="text-end me-2 d-none d-sm-block">
+                    <p class="mb-0 fw-bold text-truncate" style="max-width: 140px;">{{ auth()->user()->name ?? 'Invité' }}</p>
                     <small class="text-muted">{{ auth()->user()?->roles->first()?->name ?? 'Visiteur' }}</small>
                 </div>
-                <div class="user-avatar bg-primary text-white d-flex align-items-center justify-content-center">
+                <div class="user-avatar bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm">
                     {{ strtoupper(substr(auth()->user()->name ?? 'I', 0, 1)) }}
                 </div>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2 mt-2">
@@ -687,6 +978,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+    <!-- DataTables Responsive JS -->
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
 
     <!-- Select2 JS & French Language -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -763,12 +1058,14 @@
 
         $(document).ready(function() {
             $('.datatable').DataTable({
+                responsive: true,
+                autoWidth: false,
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json',
                 },
-                dom: "<'row mb-3 align-items-center'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4 text-center'B><'col-sm-12 col-md-4 d-flex justify-content-end'f>>" +
-                     "<'row'<'col-sm-12'tr>>" +
-                     "<'row mt-3'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7 d-flex justify-content-end'p>>",
+                dom: "<'row mb-3 align-items-center gy-2'<'col-12 col-md-4'l><'col-12 col-md-4 text-center'B><'col-12 col-md-4 text-center text-md-end'f>>" +
+                     "<'row'<'col-12 overflow-auto'tr>>" +
+                     "<'row mt-3 align-items-center gy-2'<'col-12 col-md-5 text-center text-md-start'i><'col-12 col-md-7 d-flex justify-content-center justify-content-md-end'p>>",
                 buttons: [
                     { extend: 'excelHtml5', className: 'btn btn-sm btn-success', text: '<i class="bx bx-spreadsheet"></i> Excel' },
                     { extend: 'pdfHtml5', className: 'btn btn-sm btn-danger', text: '<i class="bx bxs-file-pdf"></i> PDF', orientation: 'landscape', pageSize: 'A4' },
@@ -777,6 +1074,45 @@
                 pageLength: 25,
                 bSort: true,
                 order: []
+            });
+
+            // Fonctions de contrôle du tiroir latéral Mobile
+            function openSidebar() {
+                $('.sidebar').addClass('show');
+                $('#sidebarBackdrop').addClass('show');
+                $('body').addClass('sidebar-open');
+            }
+            function closeSidebar() {
+                $('.sidebar').removeClass('show');
+                $('#sidebarBackdrop').removeClass('show');
+                $('body').removeClass('sidebar-open');
+            }
+
+            $('#sidebarToggle').on('click', function(e) {
+                e.stopPropagation();
+                if ($('.sidebar').hasClass('show')) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+
+            $('#sidebarClose, #sidebarBackdrop').on('click', function() {
+                closeSidebar();
+            });
+
+            // Fermeture au clic sur un lien du menu sur smartphone/tablette
+            $('.sidebar .nav-link:not([data-bs-toggle]), .sidebar .nav-sub-link').on('click', function() {
+                if ($(window).width() < 992) {
+                    closeSidebar();
+                }
+            });
+
+            // Fermer avec la touche Escape
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape' && $('.sidebar').hasClass('show')) {
+                    closeSidebar();
+                }
             });
 
             // Initialiser Select2 uniquement sur les éléments HORS modaux

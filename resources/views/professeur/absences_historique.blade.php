@@ -1,79 +1,119 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Historique des Absences</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <style>
-        :root { --primary: #f59e0b; --bg: #fffbeb; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 20px; }
-        .top-bar { background: var(--primary); color: white; padding: 18px 20px; }
-        .top-bar a { color: white; text-decoration: none; }
-        .top-bar h5 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-        .filter-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .date-divider { font-size: 0.8rem; font-weight: 800; color: #9ca3af; letter-spacing: 0.05em; margin: 20px 0 10px; border-bottom: 2px dashed #e5e7eb; padding-bottom: 8px; }
-        .absence-item { background: white; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 12px; border-left: 4px solid #ef4444; }
-        .absence-item.retard { border-left-color: #f59e0b; }
-        .student-name { font-weight: 700; font-size: 0.95rem; color: #374151; margin-bottom: 2px; }
-        .meta-info { font-size: 0.8rem; color: #6c757d; }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
 
-<div class="top-bar d-flex align-items-center gap-3">
-    <a href="{{ route('professeur.dashboard') }}"><i class='bx bx-left-arrow-alt fs-3'></i></a>
-    <div>
-        <h5>Historique des absences</h5>
-        <small class="opacity-75">Consultation par classe</small>
+@section('title', 'Historique des Absences')
+@section('page_title', 'Historique des Présences & Absences')
+
+@section('content')
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">Historique des Absences & Retards</h4>
+            <p class="text-muted small mb-0">Consultez l'historique d'assiduité enregistré pour vos classes.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('professeur.absences.index') }}" class="btn btn-success btn-sm rounded-3">
+                <i class='bx bx-user-check me-1'></i> Faire l'appel
+            </a>
+            <a href="{{ route('professeur.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                <i class='bx bx-arrow-back me-1'></i> Tableau de bord
+            </a>
+        </div>
     </div>
-</div>
 
-<div class="p-3">
-    
-    <div class="filter-card">
-        <form action="{{ route('professeur.absences.historique') }}" method="GET">
-            <label class="form-label fw-bold small text-muted mb-2">CLASSE</label>
-            <select name="classe_id" class="form-select mb-3" onchange="this.form.submit()" style="border-radius:10px; font-weight:600;">
-                @foreach($classes as $c)
-                    <option value="{{ $c->id }}" {{ $c->id == $classe_id ? 'selected' : '' }}>{{ $c->nom }}</option>
-                @endforeach
-            </select>
+    <!-- Filtre par classe -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <form action="{{ route('professeur.absences.historique') }}" method="GET" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <select name="classe_id" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                    @foreach($classes as $c)
+                        <option value="{{ $c->id }}" {{ $c->id == $classe_id ? 'selected' : '' }}>
+                            {{ $c->nom }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @if($classe)
+                <div class="col-md-7 text-md-end text-muted small">
+                    Classe sélectionnée : <strong>{{ $classe->nom }}</strong> &bull; Total séances avec incidents : <strong>{{ $absences->count() }}</strong>
+                </div>
+            @endif
         </form>
     </div>
 
     @if(!$classe)
-        <div class="text-center py-5 text-muted small">Veuillez sélectionner une classe.</div>
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+            <p class="text-muted mb-0">Veuillez sélectionner une classe pour afficher son historique.</p>
+        </div>
     @elseif($absences->isEmpty())
-        <div class="text-center py-5 bg-white rounded-4 shadow-sm text-muted small">
-            <i class='bx bx-check-shield fs-1 mb-2 text-success opacity-50'></i><br>
-            Aucune absence enregistrée pour cette classe.
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white">
+            <div class="mb-3">
+                <i class='bx bx-check-shield text-success' style="font-size: 3.5rem;"></i>
+            </div>
+            <h5 class="fw-bold text-dark">Aucune absence enregistrée</h5>
+            <p class="text-muted small mb-0">Tous les élèves de la classe {{ $classe->nom }} ont été pointés présents lors des cours récents.</p>
         </div>
     @else
-        @foreach($absences as $date => $absencesDuJour)
-            <div class="date-divider">{{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</div>
-            
-            @foreach($absencesDuJour as $abs)
-                <div class="absence-item {{ $abs->type === 'retard' ? 'retard' : '' }}">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#6b7280;font-weight:700;">
-                        {{ strtoupper(substr($abs->eleve->nom, 0, 1)) }}
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="student-name">{{ $abs->eleve->nom }} {{ $abs->eleve->prenom }}</div>
-                        <div class="meta-info">
-                            <span class="badge {{ $abs->type === 'retard' ? 'bg-warning' : 'bg-danger' }} text-white me-1">
-                                {{ ucfirst($abs->type) }}
+        <div class="row g-4">
+            @foreach($absences as $date => $absencesDuJour)
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                        <div class="card-header bg-light py-3 px-4 border-0 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0 text-dark">
+                                <i class='bx bx-calendar me-2 text-primary'></i>{{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}
+                            </h6>
+                            <span class="badge bg-white text-dark border rounded-pill px-3 py-1">
+                                {{ $absencesDuJour->count() }} incident(s)
                             </span>
-                            {{ $abs->matiere->nom ?? 'Matière' }} • {{ \Carbon\Carbon::parse($abs->heure_debut)->format('H:i') }} - {{ \Carbon\Carbon::parse($abs->heure_fin)->format('H:i') }}
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="bg-white">
+                                        <tr class="text-muted small">
+                                            <th class="ps-4">Élève</th>
+                                            <th>Matière</th>
+                                            <th>Créneau</th>
+                                            <th>Type</th>
+                                            <th class="text-end pe-4">Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($absencesDuJour as $abs)
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="d-flex align-items-center gap-3">
+                                                        <div class="rounded-circle bg-secondary bg-opacity-10 text-secondary fw-bold d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                                            {{ strtoupper(substr($abs->eleve->prenom, 0, 1)) }}
+                                                        </div>
+                                                        <strong class="text-dark">{{ $abs->eleve->nom }} {{ $abs->eleve->prenom }}</strong>
+                                                    </div>
+                                                </td>
+                                                <td>{{ $abs->matiere->nom ?? '—' }}</td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border font-monospace">
+                                                        {{ \Carbon\Carbon::parse($abs->heure_debut)->format('H:i') }} - {{ \Carbon\Carbon::parse($abs->heure_fin)->format('H:i') }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge {{ $abs->type === 'retard' ? 'bg-warning text-dark' : 'bg-danger' }} rounded-pill px-3 py-1">
+                                                        {{ ucfirst($abs->type) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-end pe-4">
+                                                    <span class="badge {{ $abs->justifie ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger' }} rounded-pill px-3 py-1">
+                                                        {{ $abs->justifie ? 'Justifiée' : 'Non justifiée' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             @endforeach
-        @endforeach
+        </div>
     @endif
-
 </div>
-
-</body>
-</html>
+@endsection

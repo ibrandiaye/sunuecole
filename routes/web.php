@@ -33,9 +33,14 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
-    // === Espace Professeur (Mobile-friendly) ===
-    Route::prefix('professeur')->name('professeur.')->group(function () {
+    // === Espace Professeur ===
+    Route::prefix('professeur')->name('professeur.')->middleware(['role:enseignant|super_admin|directeur'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Web\ProfesseurController::class, 'dashboard'])->name('dashboard');
+        Route::get('classes', [\App\Http\Controllers\Web\ProfesseurController::class, 'classes'])->name('classes');
+        Route::get('classes/{classe}/eleves', [\App\Http\Controllers\Web\ProfesseurController::class, 'classeEleves'])->name('classes.eleves');
+        Route::get('planning', [\App\Http\Controllers\Web\ProfesseurController::class, 'planning'])->name('planning');
+        Route::get('cahier-textes', [\App\Http\Controllers\Web\ProfesseurController::class, 'cahierTextes'])->name('cahier_textes');
+        Route::post('cahier-textes', [\App\Http\Controllers\Web\ProfesseurController::class, 'storeCahierTexte'])->name('cahier_textes.store');
         Route::get('notes', [NoteController::class, 'mobileIndex'])->name('notes.index');
         Route::get('notes/devoirs', [NoteController::class, 'mobileDevoirs'])->name('notes.devoirs');
         Route::post('notes/evaluations', [NoteController::class, 'storeEvaluationWeb'])->name('notes.evaluations.store');
@@ -45,6 +50,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('absences/appel', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesAppel'])->name('absences.appel');
         Route::post('absences/store', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesStore'])->name('absences.store');
         Route::get('absences/historique', [\App\Http\Controllers\Web\ProfesseurController::class, 'absencesHistorique'])->name('absences.historique');
+    });
+
+    // === Espace Parent ===
+    Route::prefix('parent')->name('parent.')->middleware(['role:parent|super_admin|directeur'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\ParentWebController::class, 'dashboard'])->name('dashboard');
+        Route::get('enfants', [\App\Http\Controllers\Web\ParentWebController::class, 'enfants'])->name('enfants');
+        Route::get('notes', [\App\Http\Controllers\Web\ParentWebController::class, 'notes'])->name('notes');
+        Route::get('planning', [\App\Http\Controllers\Web\ParentWebController::class, 'planning'])->name('planning');
+        Route::get('absences', [\App\Http\Controllers\Web\ParentWebController::class, 'absences'])->name('absences');
+        Route::get('convocations', [\App\Http\Controllers\Web\ParentWebController::class, 'convocations'])->name('convocations');
+        Route::get('paiements', [\App\Http\Controllers\Web\ParentWebController::class, 'paiements'])->name('paiements');
+    });
+
+    // === Espace Élève ===
+    Route::prefix('eleve')->name('eleve.')->middleware(['role:eleve|super_admin|directeur'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Web\EleveWebController::class, 'dashboard'])->name('dashboard');
+        Route::get('planning', [\App\Http\Controllers\Web\EleveWebController::class, 'planning'])->name('planning');
+        Route::get('notes', [\App\Http\Controllers\Web\EleveWebController::class, 'notes'])->name('notes');
+        Route::get('absences', [\App\Http\Controllers\Web\EleveWebController::class, 'absences'])->name('absences');
+        Route::get('convocations', [\App\Http\Controllers\Web\EleveWebController::class, 'convocations'])->name('convocations');
+        Route::get('paiements', [\App\Http\Controllers\Web\EleveWebController::class, 'paiements'])->name('paiements');
     });
 
     // =========================================================

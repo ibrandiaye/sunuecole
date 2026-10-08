@@ -20,24 +20,32 @@
         body {
             font-family: 'Outfit', sans-serif;
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            padding: 20px 15px;
+            overflow-y: auto;
         }
 
         .auth-card {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.8);
             border-radius: 24px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.1);
             width: 100%;
             max-width: 450px;
-            padding: 40px;
+            padding: 35px 25px;
             position: relative;
             z-index: 2;
+        }
+
+        @media (max-width: 575.98px) {
+            .auth-card {
+                padding: 24px 20px;
+                border-radius: 18px;
+            }
         }
 
         .brand-icon {
@@ -127,11 +135,12 @@
         <form action="{{ route('login.post') }}" method="POST">
             @csrf
             <div class="mb-3">
-                <label class="form-label small fw-bold">ADRESSE EMAIL</label>
+                <label class="form-label small fw-bold">IDENTIFIANT</label>
                 <div class="input-group">
-                    <span class="input-group-text bg-light border-0"><i class='bx bx-envelope text-muted'></i></span>
-                    <input type="email" name="email" class="form-control" placeholder="nom@exemple.com" required autofocus>
+                    <span class="input-group-text bg-light border-0"><i class='bx bx-user text-muted'></i></span>
+                    <input type="text" name="login" class="form-control" placeholder="Email, téléphone ou matricule" value="{{ old('login') }}" required autofocus>
                 </div>
+                <div class="form-text" style="font-size: 0.75rem;">Élèves : saisissez votre matricule. Parents & Profs : téléphone ou email.</div>
             </div>
 
             <div class="mb-3">

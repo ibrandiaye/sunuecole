@@ -20,7 +20,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-8 text-end">
+                <div class="col-md-8 text-md-end text-start mt-2 mt-md-0">
                     @if($selected_classe_id)
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
                             <i class='bx bx-plus me-1'></i> Ajouter un Créneau
@@ -41,7 +41,7 @@
                 </div>
             @else
                 <div class="table-responsive">
-                    <table class="table table-bordered text-center">
+                    <table class="table table-bordered text-center align-middle" style="min-width: 720px;">
                         <thead class="table-light">
                             <tr>
                                 <th width="12%">Lundi</th>

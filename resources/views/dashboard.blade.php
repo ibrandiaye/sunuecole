@@ -5,8 +5,8 @@
 
 @section('content')
 <!-- KPIs Section -->
-<div class="row g-4 mb-4 animate__animated animate__fadeIn">
-    <div class="col-md-3">
+<div class="row g-3 g-md-4 mb-4 animate__animated animate__fadeIn">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="card p-3 border-0 bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -18,7 +18,7 @@
             <div class="mt-3 small text-white-50">Taux de croissance : <span class="text-white fw-bold">+0%</span></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="card p-3 border-0 bg-success text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -30,7 +30,7 @@
             <div class="mt-3 small text-white-50">Année : <span class="text-white fw-bold">{{ $activeYear->libelle ?? 'N/A' }}</span></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="card p-3 border-0 bg-info text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -42,7 +42,7 @@
             <div class="mt-3 small text-white-50">Taux d'encadrement : <span class="text-white fw-bold">1/--</span></div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-12 col-sm-6 col-xl-3">
         <div class="card p-3 border-0 bg-warning text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -58,7 +58,7 @@
 
 <div class="row g-4">
     <!-- Middle: Distribution -->
-    <div class="col-md-7">
+    <div class="col-12 col-lg-7">
         <div class="card p-4 h-100">
             <h5 class="fw-bold mb-4">Répartition des Élèves par Cycle</h5>
             
@@ -95,7 +95,7 @@
     </div>
 
     <!-- Right: Recent Activity -->
-    <div class="col-md-5">
+    <div class="col-12 col-lg-5">
         <div class="card p-4 h-100">
             <h5 class="fw-bold mb-4">Inscriptions Récentes</h5>
             

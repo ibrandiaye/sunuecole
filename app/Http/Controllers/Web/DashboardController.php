@@ -14,6 +14,19 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        if ($user) {
+            if ($user->hasRole('enseignant')) {
+                return redirect()->route('professeur.dashboard');
+            }
+            if ($user->hasRole('parent')) {
+                return redirect()->route('parent.dashboard');
+            }
+            if ($user->hasRole('eleve')) {
+                return redirect()->route('eleve.dashboard');
+            }
+        }
+
         $activeYear = AnneeScolaire::where('active', true)->first();
         
         $stats = [

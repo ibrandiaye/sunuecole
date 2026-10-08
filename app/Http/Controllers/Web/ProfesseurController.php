@@ -8,6 +8,7 @@ use App\Models\AnneeScolaire;
 use App\Models\CahierTexte;
 use App\Models\Classe;
 use App\Models\Eleve;
+use App\Models\EmploiDuTemps;
 use App\Models\Enseignant;
 use App\Models\Matiere;
 use App\Models\Note;
@@ -245,5 +246,117 @@ class ProfesseurController extends Controller
         return view('professeur.absences_historique', compact(
             'classes', 'classe', 'absences', 'classe_id'
         ));
+    }
+
+    /* ===============================================================
+     * MES CLASSES & ÉLÈVES
+     * =============================================================== */
+    public function classes()
+    {
+        $enseignant = $this->enseignant();
+        $cours      = $this->coursRows($enseignant);
+        $classeIds  = $cours->pluck('classe_id')->unique();
+        $classes    = Classe::whereIn('id', $classeIds)->where('active', true)->with(['niveau', 'salle'])->withCount('eleves')->get();
+
+        $pivotData = $cours->groupBy('classe_id');
+        foreach ($classes as $classe) {
+            $matiereIds = $pivotData->get($classe->id, collect())->pluck('matiere_id');
+            $classe->matieres_enseignees = Matiere::whereIn('id', $matiereIds)->get();
+        }
+
+        return view('professeur.classes', compact('classes', 'enseignant'));
+    }
+
+    public function classeEleves($classeId)
+    {
+        $enseignant = $this->enseignant();
+        $cours      = $this->coursRows($enseignant);
+        $classeIds  = $cours->pluck('classe_id')->unique();
+
+        if (!$classeIds->contains($classeId) && !auth()->user()->isAdmin()) {
+            abort(403, "Vous n'avez pas accès à cette classe.");
+        }
+
+        $classe = Classe::with(['niveau', 'salle'])->findOrFail($classeId);
+        $eleves = Eleve::where('classe_id', $classeId)->orderBy('nom')->orderBy('prenom')->get();
+
+        return view('professeur.classe_eleves', compact('classe', 'eleves', 'enseignant'));
+    }
+
+    /* ===============================================================
+     * PLANNING / EMPLOI DU TEMPS
+     * =============================================================== */
+    public function planning()
+    {
+        $enseignant = $this->enseignant();
+        $annee      = AnneeScolaire::where('active', true)->first();
+
+        $emploisQuery = EmploiDuTemps::with(['classe', 'matiere', 'salle'])
+            ->when($annee, fn($q) => $q->where('annee_scolaire_id', $annee->id));
+
+        if ($enseignant) {
+            $emploisQuery->where('enseignant_id', $enseignant->id);
+        }
+
+        $emplois = $emploisQuery->orderBy('heure_debut')->get()->groupBy('jour');
+        $jours   = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+        return view('professeur.planning', compact('emplois', 'jours', 'enseignant'));
+    }
+
+    /* ===============================================================
+     * CAHIER DE TEXTES
+     * =============================================================== */
+    public function cahierTextes(Request $request)
+    {
+        $enseignant = $this->enseignant();
+        $cours      = $this->coursRows($enseignant);
+        $classeIds  = $cours->pluck('classe_id')->unique();
+        $classes    = Classe::whereIn('id', $classeIds)->where('active', true)->get();
+
+        $classe_id = $request->get('classe_id');
+        $cahiers = CahierTexte::with(['classe', 'matiere'])
+            ->when($enseignant, fn($q) => $q->where('enseignant_id', $enseignant->id))
+            ->when($classe_id, fn($q) => $q->where('classe_id', $classe_id))
+            ->whereIn('classe_id', $classeIds)
+            ->orderByDesc('date_cours')
+            ->orderByDesc('heure_debut')
+            ->paginate(15);
+
+        // Matières de l'enseignant pour le formulaire
+        $matieresIds = $cours->pluck('matiere_id')->unique();
+        $matieres    = Matiere::whereIn('id', $matieresIds)->get();
+
+        return view('professeur.cahier_textes', compact('cahiers', 'classes', 'matieres', 'classe_id', 'enseignant'));
+    }
+
+    public function storeCahierTexte(Request $request)
+    {
+        $enseignant = $this->enseignant();
+        $data = $request->validate([
+            'classe_id'     => 'required|exists:classes,id',
+            'matiere_id'    => 'required|exists:matieres,id',
+            'date_cours'    => 'required|date',
+            'heure_debut'   => 'required',
+            'heure_fin'     => 'required|after:heure_debut',
+            'titre_lecon'   => 'required|string|max:255',
+            'contenu_lecon' => 'nullable|string',
+        ]);
+
+        $annee = AnneeScolaire::where('active', true)->first();
+
+        CahierTexte::create([
+            'classe_id'        => $data['classe_id'],
+            'matiere_id'       => $data['matiere_id'],
+            'enseignant_id'    => $enseignant?->id,
+            'date_cours'       => $data['date_cours'],
+            'heure_debut'      => $data['heure_debut'],
+            'heure_fin'        => $data['heure_fin'],
+            'titre_lecon'      => $data['titre_lecon'],
+            'contenu_lecon'    => $data['contenu_lecon'] ?? null,
+            'annee_scolaire_id'=> $annee?->id,
+        ]);
+
+        return back()->with('success', 'Séance enregistrée dans le cahier de textes avec succès.');
     }
 }

@@ -8,7 +8,7 @@
     <!-- En-tête -->
     <div class="col-md-12 mb-4">
         <div class="card p-4 border-0 shadow-sm">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3">
                 <div>
                     <h4 class="fw-bold mb-1"><i class='bx bxs-school text-primary me-2'></i>{{ $classe->nom }}</h4>
                     <p class="text-muted mb-0">
@@ -17,7 +17,7 @@
                         <span class="badge {{ $classe->active ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary' }}">{{ $classe->active ? 'Ouverte' : 'Fermée' }}</span>
                     </p>
                 </div>
-                <div>
+                <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('classes.index') }}" class="btn btn-outline-secondary me-2"><i class='bx bx-arrow-back me-1'></i>Retour</a>
                     <div class="btn-group me-2">
                         <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">

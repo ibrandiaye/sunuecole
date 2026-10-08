@@ -1,107 +1,149 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Dashboard Professeur</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <style>
-        :root { --primary: #4361ee; --bg: #f0f4ff; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 90px; }
-        .top-bar { background: var(--primary); color: white; padding: 20px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
-        .top-bar h5 { margin: 0; font-size: 1.2rem; font-weight: 700; }
-        .stat-card { background: white; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex: 1; }
-        .stat-card .num { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1; margin-bottom: 4px; }
-        .stat-card .label { font-size: 0.75rem; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
-        .section-title { font-size: 0.8rem; font-weight: 800; color: #9ca3af; letter-spacing: 0.08em; margin: 24px 0 12px; padding: 0 4px; }
-        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .menu-card { background: white; border-radius: 16px; padding: 20px 16px; text-align: center; text-decoration: none; color: inherit; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.2s; }
-        .menu-card:active { transform: scale(0.97); }
-        .menu-card i { font-size: 2.5rem; margin-bottom: 12px; display: inline-block; }
-        .menu-card .title { font-weight: 700; font-size: 0.95rem; }
-        .course-item { background: white; border-radius: 12px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-        .course-time { font-weight: 800; color: var(--primary); font-size: 0.9rem; min-width: 50px; text-align: center; }
-        .course-info .title { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
-        .course-info .subtitle { font-size: 0.8rem; color: #6c757d; }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
 
-<div class="top-bar mb-4">
-    <div class="d-flex align-items-center gap-3">
-        <div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.4rem;">
-            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-        </div>
-        <div>
-            <h5>Bonjour, {{ explode(' ', auth()->user()->name)[0] }}</h5>
-            <div class="opacity-75 small">
-                {{ $enseignant->specialite ?? 'Professeur' }} • {{ $classes->count() }} classe(s)
+@section('title', 'Tableau de bord Enseignant')
+@section('page_title', 'Espace Enseignant')
+
+@section('content')
+<div class="container-fluid p-0">
+    <!-- Header Welcome -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-primary text-white p-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #4361ee 0%, #3f37c9 100%);">
+        <div class="d-flex align-items-center gap-3 position-relative" style="z-index: 2;">
+            <div class="rounded-circle bg-white bg-opacity-20 d-flex align-items-center justify-content-center text-white fw-bold fs-2" style="width: 60px; height: 60px;">
+                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+            </div>
+            <div>
+                <h4 class="fw-bold mb-1">Bonjour, {{ auth()->user()->name }}</h4>
+                <p class="mb-0 text-white-50 small">
+                    {{ $enseignant->specialite ?? 'Professeur' }} &bull; {{ $classes->count() }} classe(s) attribuée(s)
+                </p>
             </div>
         </div>
     </div>
-</div>
 
-<div class="px-3">
-    @if(session('success'))
-        <div class="alert alert-success rounded-4 mb-3 small"><i class='bx bx-check-circle me-1'></i>{{ session('success') }}</div>
-    @endif
-
-    <!-- Statistiques -->
-    <div class="d-flex gap-3 mb-4">
-        <div class="stat-card">
-            <div class="num">{{ $totalEleves }}</div>
-            <div class="label">Élèves</div>
-        </div>
-        <div class="stat-card">
-            <div class="num text-danger">{{ $absencesAujourdhui }}</div>
-            <div class="label">Abs. (Jour)</div>
-        </div>
-        <div class="stat-card">
-            <div class="num text-success">{{ $notesMois }}</div>
-            <div class="label">Notes (Mois)</div>
-        </div>
-    </div>
-
-    <!-- Actions Principales -->
-    <div class="section-title">ACTIONS RAPIDES</div>
-    <div class="menu-grid mb-4">
-        <a href="{{ route('professeur.notes.index') }}" class="menu-card">
-            <i class='bx bx-edit text-primary'></i>
-            <div class="title">Saisie des Notes</div>
-        </a>
-        <a href="{{ route('professeur.absences.index') }}" class="menu-card">
-            <i class='bx bx-user-check text-warning'></i>
-            <div class="title">Faire l'Appel</div>
-        </a>
-    </div>
-
-    <!-- Cours du jour -->
-    <div class="d-flex justify-content-between align-items-end mb-2 px-1">
-        <div class="section-title mb-0">CAHIER DE TEXTES ({{ \Carbon\Carbon::parse($today)->format('d/m') }})</div>
-        <a href="{{ route('professeur.absences.historique') }}" class="small fw-bold text-decoration-none">Historique</a>
-    </div>
-
-    @forelse($coursDuJour as $cours)
-        <div class="course-item">
-            <div class="course-time">
-                {{ \Carbon\Carbon::parse($cours->heure_debut)->format('H:i') }}<br>
-                <small class="text-muted fw-normal">{{ \Carbon\Carbon::parse($cours->heure_fin)->format('H:i') }}</small>
+    <!-- Statistiques rapides -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
+                <div class="text-primary fs-2 mb-1"><i class='bx bxs-user-badge'></i></div>
+                <h3 class="fw-bold mb-0 text-dark">{{ $totalEleves }}</h3>
+                <small class="text-muted fw-semibold">Élèves au total</small>
             </div>
-            <div class="course-info flex-grow-1 border-start ps-3">
-                <div class="title">{{ $cours->classe->nom }} • {{ $cours->matiere->nom }}</div>
-                <div class="subtitle text-truncate" style="max-width: 200px;">
-                    {{ $cours->titre_lecon }}
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
+                <div class="text-danger fs-2 mb-1"><i class='bx bxs-user-x'></i></div>
+                <h3 class="fw-bold mb-0 text-danger">{{ $absencesAujourdhui }}</h3>
+                <small class="text-muted fw-semibold">Absences (Aujourd'hui)</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
+                <div class="text-success fs-2 mb-1"><i class='bx bxs-edit'></i></div>
+                <h3 class="fw-bold mb-0 text-success">{{ $notesMois }}</h3>
+                <small class="text-muted fw-semibold">Notes saisies (Mois)</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 text-center h-100">
+                <div class="text-info fs-2 mb-1"><i class='bx bxs-school'></i></div>
+                <h3 class="fw-bold mb-0 text-info">{{ $classes->count() }}</h3>
+                <small class="text-muted fw-semibold">Mes Classes</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Rapides -->
+    <h6 class="fw-bold text-muted text-uppercase small mb-3">Actions Rapides</h6>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <a href="{{ route('professeur.notes.index') }}" class="card border-0 shadow-sm rounded-4 p-3 text-center text-decoration-none text-dark h-100 hover-card">
+                <div class="text-primary fs-1 mb-2"><i class='bx bxs-edit-alt'></i></div>
+                <span class="fw-bold small d-block">Saisie des Notes</span>
+                <small class="text-muted" style="font-size: 0.75rem;">Devoirs & Compositions</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ route('professeur.absences.index') }}" class="card border-0 shadow-sm rounded-4 p-3 text-center text-decoration-none text-dark h-100 hover-card">
+                <div class="text-success fs-1 mb-2"><i class='bx bxs-user-check'></i></div>
+                <span class="fw-bold small d-block">Faire l'Appel</span>
+                <small class="text-muted" style="font-size: 0.75rem;">Présences par créneau</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ route('professeur.planning') }}" class="card border-0 shadow-sm rounded-4 p-3 text-center text-decoration-none text-dark h-100 hover-card">
+                <div class="text-info fs-1 mb-2"><i class='bx bxs-calendar'></i></div>
+                <span class="fw-bold small d-block">Mon Emploi du Temps</span>
+                <small class="text-muted" style="font-size: 0.75rem;">Planning de la semaine</small>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="{{ route('professeur.cahier_textes') }}" class="card border-0 shadow-sm rounded-4 p-3 text-center text-decoration-none text-dark h-100 hover-card">
+                <div class="text-warning fs-1 mb-2"><i class='bx bxs-book-content'></i></div>
+                <span class="fw-bold small d-block">Cahier de Textes</span>
+                <small class="text-muted" style="font-size: 0.75rem;">Séances & devoirs</small>
+            </a>
+        </div>
+    </div>
+
+    <!-- Cours du jour & Classes -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Cahier de textes du jour ({{ \Carbon\Carbon::parse($today)->format('d/m/Y') }})</h5>
+                    <a href="{{ route('professeur.cahier_textes') }}" class="small fw-bold text-decoration-none">Tout voir</a>
+                </div>
+
+                @forelse($coursDuJour as $cours)
+                    <div class="p-3 mb-2 rounded-3 bg-light d-flex align-items-center gap-3">
+                        <div class="text-center font-monospace" style="min-width: 60px;">
+                            <strong class="text-primary">{{ \Carbon\Carbon::parse($cours->heure_debut)->format('H:i') }}</strong><br>
+                            <small class="text-muted">{{ \Carbon\Carbon::parse($cours->heure_fin)->format('H:i') }}</small>
+                        </div>
+                        <div class="border-start ps-3 flex-grow-1">
+                            <div class="fw-bold text-dark">{{ $cours->classe->nom }} &bull; {{ $cours->matiere->nom }}</div>
+                            <div class="text-muted small text-truncate" style="max-width: 300px;">
+                                {{ $cours->titre_lecon }}
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-4 text-muted small">
+                        <i class='bx bx-notepad fs-2 d-block mb-2 text-secondary opacity-50'></i>
+                        Aucune séance enregistrée pour aujourd'hui.
+                    </div>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Mes Classes</h5>
+                    <a href="{{ route('professeur.classes') }}" class="small fw-bold text-decoration-none">Détails</a>
+                </div>
+
+                <div class="list-group list-group-flush">
+                    @forelse($classes as $c)
+                        <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center border-bottom">
+                            <div>
+                                <h6 class="fw-bold mb-0">{{ $c->nom }}</h6>
+                                <small class="text-muted">{{ $c->niveau->nom ?? 'Niveau' }}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ route('professeur.classes.eleves', $c->id) }}" class="btn btn-outline-primary btn-sm rounded-3">
+                                    <i class='bx bx-group me-1'></i> Élèves
+                                </a>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-4 text-muted small">
+                            Aucune classe assignée.
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
-    @empty
-        <div class="text-center py-4 bg-white rounded-4 shadow-sm text-muted small">
-            Aucun cours enregistré aujourd'hui.
-        </div>
-    @endforelse
-
+    </div>
 </div>
-
-</body>
-</html>
+@endsection

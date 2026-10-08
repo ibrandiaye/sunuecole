@@ -146,7 +146,7 @@
             </div>
         </div>
 
-        <div class="alert alert-{{ $tabColor }} shadow-sm border-0 d-flex justify-content-between align-items-center rounded-4 mb-4">
+        <div class="alert alert-{{ $tabColor }} shadow-sm border-0 d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 rounded-4 mb-4">
             <div class="d-flex align-items-center">
                 <i class='bx {{ $tabIcon }} fs-2 me-3'></i>
                 <div>
@@ -162,7 +162,7 @@
         </div>
 
         <div class="table-responsive mt-2">
-            <table class="table table-hover align-middle datatable">
+            <table class="table table-hover align-middle datatable" style="min-width: 750px;">
                 <thead class="bg-light">
                     <tr>
                         <th>CLASSE</th>

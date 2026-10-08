@@ -1,108 +1,116 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Appel & Cahier de textes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <style>
-        :root { --primary: #f59e0b; --bg: #fffbeb; }
-        body { background: var(--bg); font-family: 'Segoe UI', sans-serif; min-height: 100vh; padding-bottom: 20px; }
-        .top-bar { background: var(--primary); color: white; padding: 18px 20px; }
-        .top-bar a { color: white; text-decoration: none; }
-        .top-bar h5 { margin: 0; font-size: 1.1rem; font-weight: 700; }
-        .card-form { background: white; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 22px; margin-bottom: 16px; }
-        .form-label { font-size: 0.75rem; font-weight: 700; color: #6c757d; letter-spacing: 0.05em; margin-bottom: 6px; }
-        .form-select, .form-control { border-radius: 12px; border: 2px solid #e9ecef; padding: 12px 14px; font-weight: 600; }
-        .form-select:focus, .form-control:focus { border-color: var(--primary); box-shadow: none; }
-        .btn-go { background: var(--primary); color: white; border: none; border-radius: 14px; padding: 15px; font-size: 1rem; font-weight: 700; width: 100%; }
-        .btn-go:active { opacity: 0.85; }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
 
-<div class="top-bar d-flex align-items-center gap-3">
-    <a href="{{ route('professeur.dashboard') }}"><i class='bx bx-left-arrow-alt fs-3'></i></a>
-    <div>
-        <h5>Appel & Cahier de textes</h5>
-        <small class="opacity-75">Sélection du cours</small>
+@section('title', "Faire l'Appel")
+@section('page_title', "Faire l'Appel & Présences")
+
+@section('content')
+<div class="container-fluid p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1">Pointage des Présences</h4>
+            <p class="text-muted small mb-0">Sélectionnez la classe, la matière et le créneau horaire pour démarrer l'appel.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('professeur.absences.historique') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                <i class='bx bx-history me-1'></i> Historique des absences
+            </a>
+            <a href="{{ route('professeur.dashboard') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                <i class='bx bx-arrow-back me-1'></i> Tableau de bord
+            </a>
+        </div>
     </div>
-</div>
 
-<div class="p-3 pt-4">
+    @if(session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
+            <i class='bx bx-check-circle me-1'></i> {{ session('success') }}
+        </div>
+    @endif
 
     @if($classes->isEmpty())
-        <div class="text-center py-5">
-            <i class='bx bx-book-open text-muted' style="font-size:3rem"></i>
-            <p class="text-muted mt-3">Aucun cours assigné à votre profil.</p>
+        <div class="card border-0 shadow-sm rounded-4 p-5 text-center">
+            <div class="mb-3">
+                <i class='bx bx-user-x text-muted' style="font-size: 3.5rem;"></i>
+            </div>
+            <h5 class="fw-bold">Aucun cours assigné</h5>
+            <p class="text-muted small">Aucun cours n'est actuellement assigné à votre compte.<br>Veuillez contacter l'administration de l'établissement.</p>
         </div>
     @else
+        <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+            <h5 class="fw-bold mb-3 text-dark">
+                <i class='bx bx-calendar-check text-success me-2'></i>Sélectionner la séance de cours
+            </h5>
 
-    <form action="{{ route('professeur.absences.appel') }}" method="GET">
+            <form action="{{ route('professeur.absences.appel') }}" method="GET">
+                <div class="row g-4 mb-4">
+                    {{-- Classe --}}
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Classe</label>
+                        <select name="classe_id" id="classeSelect" class="form-select rounded-3 py-2" required>
+                            <option value="">— Choisir la classe —</option>
+                            @foreach($classes as $classe)
+                                <option value="{{ $classe->id }}">{{ $classe->nom }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-        <div class="card-form">
+                    {{-- Matière --}}
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Matière</label>
+                        <select name="matiere_id" id="matiereSelect" class="form-select rounded-3 py-2" required>
+                            <option value="">— Choisir d'abord la classe —</option>
+                        </select>
+                    </div>
 
-            {{-- Classe --}}
-            <label class="form-label">CLASSE</label>
-            <select name="classe_id" id="classeSelect" class="form-select mb-4" required>
-                <option value="">— Choisir la classe —</option>
-                @foreach($classes as $classe)
-                    <option value="{{ $classe->id }}">{{ $classe->nom }}</option>
-                @endforeach
-            </select>
+                    {{-- Date --}}
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Date du cours</label>
+                        <input type="date" name="date" class="form-control rounded-3 py-2" value="{{ date('Y-m-d') }}" required>
+                    </div>
 
-            {{-- Matière --}}
-            <label class="form-label">MATIÈRE</label>
-            <select name="matiere_id" id="matiereSelect" class="form-select mb-4" required>
-                <option value="">— Choisir la matière —</option>
-            </select>
+                    {{-- Heure Début --}}
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Heure Début</label>
+                        <input type="time" name="heure_debut" class="form-control rounded-3 py-2" value="08:00" required>
+                    </div>
 
-            {{-- Date --}}
-            <label class="form-label">DATE DU COURS</label>
-            <input type="date" name="date" class="form-control mb-4" value="{{ date('Y-m-d') }}" required>
-
-            {{-- Heures --}}
-            <div class="row">
-                <div class="col-6">
-                    <label class="form-label">DÉBUT</label>
-                    <input type="time" name="heure_debut" class="form-control" value="08:00" required>
+                    {{-- Heure Fin --}}
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Heure Fin</label>
+                        <input type="time" name="heure_fin" class="form-control rounded-3 py-2" value="10:00" required>
+                    </div>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">FIN</label>
-                    <input type="time" name="heure_fin" class="form-control" value="10:00" required>
-                </div>
-            </div>
 
+                <div class="pt-3 border-top d-flex justify-content-end">
+                    <button type="submit" class="btn btn-success rounded-3 px-4 py-2 fw-bold shadow-sm">
+                        <i class='bx bx-user-check me-2'></i>Démarrer la feuille d'appel
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <button type="submit" class="btn-go">
-            <i class='bx bx-user-check me-2'></i>Démarrer l'appel
-        </button>
-
-    </form>
     @endif
 </div>
 
+@section('scripts')
 <script>
 const classeMatieres = @json($classeMatieres);
 const classeSelect = document.getElementById('classeSelect');
 const matiereSelect = document.getElementById('matiereSelect');
 
-classeSelect.addEventListener('change', function () {
-    const id = this.value;
-    matiereSelect.innerHTML = '<option value="">— Choisir la matière —</option>';
+if (classeSelect && matiereSelect) {
+    classeSelect.addEventListener('change', function () {
+        const id = this.value;
+        matiereSelect.innerHTML = '<option value="">— Choisir la matière —</option>';
 
-    if (id && classeMatieres[id]) {
-        classeMatieres[id].forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = m.nom;
-            matiereSelect.appendChild(opt);
-        });
-    }
-});
+        if (id && classeMatieres[id]) {
+            classeMatieres[id].forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nom;
+                matiereSelect.appendChild(opt);
+            });
+        }
+    });
+}
 </script>
-
-</body>
-</html>
+@endsection
+@endsection
